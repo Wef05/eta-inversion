@@ -11,3 +11,4 @@ build
 *.jpg
 bak/
 !docs/images/teaser.jpg
+/untracked

@@ -97,7 +97,7 @@ def run_eval(path: str, data: str, model: Dict[str, Any], method: Dict[str, Any]
         if "zT_gt" in sample and isinstance(edit_cfg, dict):
             edit_cfg["zT_gt"] = sample["zT_gt"]
 
-        res = editor.edit(image, source_prompt, target_prompt, edit_cfg, inv_cfg=dict(edit_word_idx=sample["edit_word_idx"], mask=sample["mask"]))  #, inv_cfg=dict(mask=sample["mask"])
+        res = editor.edit(image, source_prompt, target_prompt, edit_cfg, inv_cfg=dict(edit_word_idx=sample.get("edit_word_idx"), mask=sample.get("mask")))  #, inv_cfg=dict(mask=sample["mask"])
 
         if res is not None:
             # if successfully edited
