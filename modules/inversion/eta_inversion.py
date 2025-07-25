@@ -336,7 +336,7 @@ class EtaInversion(DiffusionInversion):
             opx = Image.fromarray(sketch_np)
             opx.save("output_encoded.png")
             with ctx:
-                    anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,0.5)
+                    anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,0.1)
                     if t >= 500:
                         new_latent[1:2] = anti_latent[1:2]
         #new_latent = new_latent.detach()  # 断开梯度连接
