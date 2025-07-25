@@ -178,6 +178,28 @@ class EtaInversion(DiffusionInversion):
         return torch.randn((n, 1, 4, 64, 64), generator=generator, device=self.model.device).to(self.model.unet.dtype)
 
 
+    def load_mask_and_encode(self,mask_path: str) -> torch.Tensor:
+        # 读取灰度图
+        device = self.model.device
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        #assert mask is not None and mask.shape == (512, 512),
+        mask = 1 - mask.astype('float32') / 255.0  # 归一化到[0,1]
+
+        #mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)  # 转为 [1,1,64,64] 张量
+        # mask = mask.repeat(1, 3, 1, 1)# 复制到3通道 -> [1,3,512,512]
+        # with torch.no_grad():
+        #     latent = self.encode(mask.to(device))
+        mask = torch.from_numpy(mask).unsqueeze(0).unsqueeze(0)  # [1,1,512,512]
+        mask= F.interpolate(mask, size=(64, 64), mode='bilinear', align_corners=False)  # 下采样到[64,64]
+        mask = mask.repeat(1, 4, 1, 1)# 复制到4通道 ->   [1,4,64,64]
+        # Min-Max 归一化到 [0,1]
+        # latent_mins = [mask[0, i].min().item() for i in range(4)]
+        # latent_maxs = [mask[0, i].max().item() for i in range(4)]
+        # #latent = (latent - latent_min) / (latent_max - latent_min + 1e-8)
+        # latent = torch.stack(
+        #     [(latent[0, i] - latent_mins[i]) / (latent_maxs[i] - latent_mins[i] + 1e-8) for i in range(4)],
+        #     dim=0).unsqueeze(0)
+        return mask
     def get_mask(self, key, mask, t, edit_word_idx):
         if self.mask_mode_cfg is not None:
             res = self.mask_mode_cfg["attn_res"]
@@ -260,9 +282,11 @@ class EtaInversion(DiffusionInversion):
         if self.mask_mode_cfg is not None:
             mask_eta = self.get_mask("mask_eta", mask, t, edit_word_idx)
             mask_dirinv = self.get_mask("mask_dirinv", mask, t, edit_word_idx)
+            mask_sketch = self.load_mask_and_encode("test/testMask.png").to(self.model.device)
 
+            sigma = 1
             if mask_eta is not None:
-                eta = mask_eta * eta
+                eta = eta * ( sigma * mask_eta + (1 - sigma ) * mask_sketch)
 
             new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise).prev_sample
 
