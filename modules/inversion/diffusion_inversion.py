@@ -8,6 +8,15 @@ from ..editing.controller import ControllerBase, ControllerEmpty
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
+import hashlib
+def tensor_md5(tensor: torch.Tensor) -> str:
+    # 确保 tensor 在 cpu 上并转为 numpy
+    arr = tensor.detach().cpu().numpy()
+    # 转为字节流
+    byte_data = arr.tobytes()
+    # 计算 md5
+    md5 = hashlib.md5(byte_data).hexdigest()
+    return md5
 
 class DiffusionInversion:
     """Main class for diffusion inversion. Supports DDIM and DPM scheduler for now.
