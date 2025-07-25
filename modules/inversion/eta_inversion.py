@@ -17,8 +17,30 @@ import torchvision
 
 
 import os
+import matplotlib.pyplot as plt
+import re
+import cv2
+from PIL import Image
 os.system("rm -rf result/pie_eta_new/*")
 
+import cv2
+import torch
+def safe_filename(s: str) -> str:
+    """把字符串转成安全文件名：去掉非字母数字下划线字符。"""
+    return re.sub(r'[^a-zA-Z0-9_]', '_', s)
+
+def to_4ch(attn_map):
+    """
+    把注意力张量统一成 [1,4,H,W] 形式，方便后续 overlay。
+    """
+    # attn_map 可能是 [H,W]、[C,H,W]、[1,H,W]、[4,H,W] 等
+    if attn_map.dim() == 2:  # [H,W]
+        attn_map = attn_map.unsqueeze(0).unsqueeze(0)  # -> [1,1,H,W]
+    elif attn_map.dim() == 3:  # [C,H,W]
+        attn_map = attn_map.unsqueeze(0)  # -> [1,C,H,W]
+    if attn_map.shape[1] == 1:  # 若通道=1，则复制到4通道
+        attn_map = attn_map.repeat(1, 4, 1, 1)  # -> [1,4,H,W]
+    return attn_map
 
 class EtaTensor(torch.Tensor):
     # Hack to avoid exception in DDIM scheduler in eta > 0 condition
@@ -374,6 +396,155 @@ class EtaInversion(DiffusionInversion):
 
         return {"eta": eta, "variance_noise": variance_noise, "delta": delta, "latent_prev": latent_prev, "latent_prev_rec": latent_prev_rec, "loss": loss}
 
+    def overlay_attn_on_image(self, vae, device, orig_image, attn_latent, alpha=0.5):
+        """
+        将注意力图叠加到原图上（增强对比度版）
+        Input:
+            vae: VAE模型
+            device: torch.device
+            orig_image: 原图 (Tensor [B,3,H,W] / [3,H,W] 或 Numpy [H,W,3])
+            attn_latent: 注意力latent (Tensor [1,4,h,w])
+            alpha: 叠加透明度
+        Output:
+            overlay: 叠加后的RGB图像 (uint8)
+        """
+
+        # 如果是 Tensor，转为 numpy 格式 [H,W,3]
+        if isinstance(orig_image, torch.Tensor):
+            if orig_image.dim() == 4:  # [B, C, H, W]
+                orig_image = orig_image[0]
+            orig_image = orig_image.detach().cpu().permute(1, 2, 0).numpy()
+
+        # 归一化并转为 0~255 uint8
+        if orig_image.max() <= 1.0:
+            img = (orig_image * 255).astype(np.uint8)
+        else:
+            img = orig_image.astype(np.uint8)
+
+        # VAE解码注意力图
+        # with torch.no_grad():
+        #     decoded_attn = vae.decode(attn_latent.to(device)).sample
+        decoded_attn = self.decode(attn_latent.to(device))
+        heatmap = decoded_attn[0].cpu().permute(1, 2, 0).numpy()
+
+        # 使用灰度强度图（取三个通道平均值，而不是单通道）
+        heatmap_gray = heatmap.mean(axis=2)
+
+        # 对比度拉伸: 2% - 98% 范围线性拉伸
+        p2, p98 = np.percentile(heatmap_gray, (2, 98))
+        heatmap_gray = np.clip((heatmap_gray - p2) / (p98 - p2), 0, 1)
+
+        # gamma 调整（可选，增强低亮度区域）
+        gamma = 0.6
+        heatmap_gray = heatmap_gray ** gamma
+
+        # 转为 0-255
+        heatmap_gray = (heatmap_gray * 255).astype(np.uint8)
+
+        # 上色
+        heatmap_color = cv2.applyColorMap(heatmap_gray, cv2.COLORMAP_JET)
+        heatmap_color = cv2.cvtColor(heatmap_color, cv2.COLOR_BGR2RGB)
+
+        # 叠加
+        overlay = cv2.addWeighted(img, 1 - alpha, heatmap_color, alpha, 0)
+        return overlay
+
+    def save_word_gifs(self,
+                       image,  # 原始输入图像（Tensor或np，根据 overlay_attn_on_image 接口）
+                       prompt: str,
+                       alpha: float = 0.6,  # 叠加透明度
+                       duration: int = 80,  # 每帧停留毫秒数(越小越快)
+                       save_dir: str = 'result/attn_gifs'):
+        """
+        简短描述：
+            为 prompt 中的每个词，收集所有时间步的注意力图叠加结果，生成 GIF 动画并保存。
+
+        Input：
+            self:             含有 attn_maps_forward、model、overlay_attn_on_image 等成员的对象
+            image:            原始图像（用于叠加注意力）
+            prompt:           文本提示词，词之间用空格分隔
+            alpha:            注意力图叠加透明度
+            duration:         GIF 每帧持续时间（毫秒）
+            save_dir:         GIF 输出目录
+
+        Output：
+            无显式返回；在 save_dir 下生成若干 .gif 文件
+
+        Method：
+            1. 创建输出目录
+            2. 拆分 prompt 得到词列表
+            3. 遍历每个词 index：
+                 a. 遍历所有时间步 t，取出该词在该时刻的注意力图
+                 b. 统一维度到 [1,4,H,W]
+                 c. 调用 overlay_attn_on_image 叠加到原图，得到一帧 np.uint8 RGB 图
+                 d. 转成 PIL.Image 并加入帧列表
+               将帧列表写为 GIF 文件（首帧 save + append_images）
+        """
+        os.makedirs(save_dir, exist_ok=True)
+
+        words = prompt.split(" ")
+        num_steps = len(self.attn_maps_forward)  # 假设: list长度即时间步数
+
+        for word_idx, raw_word in enumerate(words):
+            frames = []
+            safe_word = safe_filename(raw_word)
+
+            if isinstance(self.attn_maps_forward, dict):
+                # 只保留数字键
+                time_steps = sorted([k for k in self.attn_maps_forward.keys() if isinstance(k, int)])
+            else:
+                time_steps = range(len(self.attn_maps_forward))
+
+            for t in time_steps:
+                attn_maps_t = self.attn_maps_forward[t]
+                attn_map = attn_maps_t[word_idx]
+
+                attn_map = to_4ch(attn_map)  # -> [1,4,H,W]
+
+                # overlay：返回应为 RGB np.ndarray(H,W,3)，你的原始函数最后一行保存时曾做 [:,:,::-1] 说明返回 RGB
+                overlay = self.overlay_attn_on_image(self.model.vae,
+                                                     self.model.device,
+                                                     image,
+                                                     attn_map,
+                                                     alpha=alpha)
+
+                # 转 PIL.Image（确保 uint8）
+                if overlay.dtype != 'uint8':
+                    overlay = overlay.astype('uint8')
+                frame = Image.fromarray(overlay)  # overlay 已是 RGB
+                frames.append(frame)
+
+            # GIF 保存
+            gif_path = os.path.join(save_dir, f'attn_{word_idx:02d}_{safe_word}.gif')
+            if len(frames) == 1:
+                # 只有一帧也存，防止只有一步的情况
+                frames[0].save(gif_path, save_all=True, loop=0, duration=duration)
+            else:
+                frames[0].save(gif_path,
+                               save_all=True,
+                               append_images=frames[1:],
+                               loop=0,
+                               duration=duration,
+                               optimize=True)
+
+            print(f"[INFO] Saved GIF for word {word_idx} ({raw_word}) -> {gif_path}")
+            # ==== 2. 生成 mean mask 叠加图 ====
+            if "mean" not in self.attn_maps_forward:
+                print("[WARN] No 'mean' key in attn_maps_forward")
+                return
+
+            H = self.model.vae.config.sample_size  # 或 image.shape[-2]
+            W = H
+            mean_maps = self.attn_maps_forward["mean"]
+
+            for word_idx, raw_word in enumerate(words):
+                safe_word = safe_filename(raw_word)
+                attn_map = mean_maps[word_idx].unsqueeze(0).unsqueeze(0)  # [1,1,H,W]
+                mask = (attn_map.squeeze().cpu().numpy() * 255).astype(np.uint8)
+                mask_img = Image.fromarray(mask, mode='L')
+                mask_path = os.path.join(save_dir, f'mask_{word_idx:02d}_{safe_word}.png')
+                mask_img.save(mask_path)
+                print(f"[INFO] Saved mask for word {word_idx} ({raw_word}) -> {mask_path}")
 
     def invert(self, image: torch.Tensor, prompt: Optional[str]=None, context: Optional[torch.Tensor]=None, 
                guidance_scale_fwd: Optional[float]=None, inv_cfg: Optional[Dict[str, Any]]=None,) -> Dict[str, Any]:
@@ -394,6 +565,7 @@ class EtaInversion(DiffusionInversion):
             num_words = len(attn_maps_lst[0])
 
             self.attn_maps_forward["mean"] = [torch.mean(torch.stack([a[word_idx] for a in attn_maps_lst]), dim=0) for word_idx in range(num_words)]
+            self.save_word_gifs(image=image, prompt=prompt, alpha=0.6, duration=80)
 
         # with self.use_controller(ControllerAttentionStorePerStep(self.model, (lambda attn, t: self.attn_maps_forward.update({t.item(): attn})))):
         # fwd_result = super().invert(image, prompt, context, guidance_scale_fwd, inv_cfg=inv_cfg)
