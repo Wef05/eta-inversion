@@ -4,9 +4,11 @@ import torch.nn.functional as F
 from .latent_predictor import LatentEdgePredictor, hook_unet
 from modules.inversion.diffusion_inversion import DiffusionInversion
 class AntiGradientPipeline(DiffusionInversion):
-
-    feature_blocks = None
-    lgp_model = None
+    def __init__(self, model, scheduler):
+        self.model = model
+        self.scheduler = scheduler  # 添加这一行
+        self.feature_blocks = None
+        self.lgp_model = None
     def setup(self):
         lgp =  LatentEdgePredictor(9320, 4, 9)
         lgp.load_state_dict(torch.load("edge_predictor.pt"))
@@ -39,14 +41,17 @@ class AntiGradientPipeline(DiffusionInversion):
 
         intermediate_result = []
         for block in self.feature_blocks:
-            resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")#对 block.output 进行上采样（插值），使其空间尺寸与 latents 的第三个维度相同
+            resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")[2:4]#对 block.output 进行上采样（插值），使其空间尺寸与 latents 的第三个维度相同
             intermediate_result.append(resized)
             del block.output
 
         intermediate_result = torch.cat(intermediate_result, dim=1)
         estimate_noise = self.get_noise_level(zT, timestep)
         outputs = self.lgp_model(intermediate_result, torch.cat([estimate_noise] * 2))
-
+        # outputs = self.lgp_model(
+        #     intermediate_result.to(self.model.unet.dtype),
+        #     torch.cat([estimate_noise] * 2).to(self.model.unet.dtype)
+        # )
         b, _, h, w = latents_prev.shape
         _, outputs = rearrange(outputs, "(b w h) c -> b c h w", b=b, h=h, w=w).chunk(2)
         loss = F.mse_loss(sketch_image.float(), outputs.float(), reduction="mean")
