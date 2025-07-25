@@ -280,7 +280,6 @@ class EtaInversion(DiffusionInversion):
         latent = self.controller.begin_step(latent=latent, t=t)
         # make a noise prediction using UNet
         ctx = torch.enable_grad()
-        ctx = torch.no_grad()
         with ctx:
             noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
         # get best eta and variance noise
