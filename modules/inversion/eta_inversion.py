@@ -249,7 +249,7 @@ class EtaInversion(DiffusionInversion):
         return mask
 
     def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale_bwd: Optional[float]=None, 
-                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None) -> Tuple[torch.Tensor, torch.Tensor]:
+                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one backward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.
 
         Args:
@@ -318,7 +318,7 @@ class EtaInversion(DiffusionInversion):
 
         return new_latent, noise_pred
 
-    def diffusion_backward(self, latent: torch.Tensor, context: torch.Tensor, inv_result: Dict[str, Any]) -> torch.Tensor:
+    def diffusion_backward(self, latent: torch.Tensor, context: torch.Tensor, inv_result: Dict[str, Any],sketch=None) -> torch.Tensor:
         generator = torch.Generator(device=self.model.device).manual_seed(self.seed)
 
         inv_cfg = inv_result["inv_cfg"]
@@ -335,7 +335,7 @@ class EtaInversion(DiffusionInversion):
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
-                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx)
+                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch)
             
         return latent
 

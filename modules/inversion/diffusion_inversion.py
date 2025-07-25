@@ -427,7 +427,7 @@ class DiffusionInversion:
 
         return {"latents": latents, "noise_preds": noise_preds, "zT_inv": latents[-1]}
 
-    def diffusion_backward(self, latent: torch.Tensor, context: torch.Tensor, inv_result: Dict[str, Any]) -> torch.Tensor:
+    def diffusion_backward(self, latent: torch.Tensor, context: torch.Tensor, inv_result: Dict[str, Any],sketch=None) -> torch.Tensor:
         """Run backward (denoise) diffusion process to get latent z0 from inverse latent zT
 
         Args:
@@ -501,7 +501,7 @@ class DiffusionInversion:
         return torch.cat(latents)
 
     def sample(self, inv_result: Dict[str, Any], prompt: Optional[Union[str, List[str]]]=None, 
-               context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None) -> Dict[str, Any]:
+               context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None,sketch = None) -> Dict[str, Any]:
         """Sample an image from the inversion result.
 
         Args:
@@ -528,7 +528,7 @@ class DiffusionInversion:
             latent = self.cat_latent([latent] * num_prompts)
 
         # denoise
-        z0 = self.diffusion_backward(latent, context, inv_result)
+        z0 = self.diffusion_backward(latent, context, inv_result,sketch=sketch)
 
         if z0 is None:
             return None

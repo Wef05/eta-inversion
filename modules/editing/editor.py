@@ -64,7 +64,7 @@ class ControllerBasedEditor(Editor):
         """
         raise NotImplementedError
 
-    def edit(self, image: torch.Tensor, source_prompt: str, target_prompt: str, cfg: Optional[Dict[str, Any]]=None, inv_cfg=None, **kwargs) -> Dict[str, Any]:
+    def edit(self, image: torch.Tensor, source_prompt: str, target_prompt: str, cfg: Optional[Dict[str, Any]]=None, inv_cfg=None, sketch=None,**kwargs) -> Dict[str, Any]:
         if cfg is None:
             cfg = {**self.dft_cfg}
 
@@ -98,7 +98,7 @@ class ControllerBasedEditor(Editor):
         # diffusion step is modified by the controller
         with self.inverter.use_controller(controller):
             if not self.no_source_backward:
-                edit_res = self.inverter.sample(inv_res, context=[src_context, target_context])
+                edit_res = self.inverter.sample(inv_res, context=[src_context, target_context],sketch=sketch)
                 
                 if edit_res is None:
                     return None
@@ -110,7 +110,7 @@ class ControllerBasedEditor(Editor):
                     "latent": edit_res["latent"][1:2],
                 }
             else:
-                edit_res = self.inverter.sample(inv_res, context=[target_context])
+                edit_res = self.inverter.sample(inv_res, context=[target_context],sketch=sketch)
                 
                 return {
                     "image": edit_res["image"], 
