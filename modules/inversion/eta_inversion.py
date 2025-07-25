@@ -252,8 +252,8 @@ class EtaInversion(DiffusionInversion):
 
         return mask
 
-    def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale_bwd: Optional[float]=None, 
-                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor,guidance_scale_bwd: Optional[float]=None,
+                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None,zT=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one backward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.
 
         Args:
@@ -323,7 +323,8 @@ class EtaInversion(DiffusionInversion):
             sketch = self.encode(sketch.to(self.model.device))
             # opx = Image.fromarray(decode_latents(sketch))
             # opx.save("output_encoded.png")
-            latent[1:2] = self.anti_gradient.apply_anti_gradient(latent, noise_pred, t, sketch, 1.6)
+            # apply_anti_gradient(latent_model_input, latents, zT,sketch_image, t, 1.6)
+            new_latent[1:2] = self.anti_gradient.apply_anti_gradient(latent[1:2], new_latent[1:2],zT,sketch,t,1.6)
         # update the latent based on the predicted noise with the noise schedulers
         # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
 
@@ -355,7 +356,7 @@ class EtaInversion(DiffusionInversion):
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
-                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch)
+                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=inv_result["zT_inv"])
             
         return latent
 
