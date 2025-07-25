@@ -148,7 +148,7 @@ class Demo:
                 type="numpy",
                 width=512, height=512,
                 value=None,
-                image_mode="L",  # 灰度草图
+                image_mode="RGB",  # 灰度草图
                 tool="editor",  # 允许简单编辑
                 optional=True  # ← 可选上传
             )
