@@ -279,7 +279,7 @@ class EtaInversion(DiffusionInversion):
         # call controller callback (e.g. ptp)
         latent = self.controller.begin_step(latent=latent, t=t)
         # make a noise prediction using UNet
-        ctx = torch.enable_grad()
+        ctx = torch.enable_grad() if sketch is not None else torch.no_grad()
         with ctx:
             noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
         # get best eta and variance noise
@@ -330,8 +330,10 @@ class EtaInversion(DiffusionInversion):
             # opx = Image.fromarray(decode_latents(sketch))
             # opx.save("output_encoded.png")
             with ctx:
-                anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,1.6)
-            new_latent[1:2] = anti_latent[1:2]
+                    anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,0.5)
+                    if t >= 500:
+                        new_latent[1:2] = anti_latent[1:2]
+        #new_latent = new_latent.detach()  # 断开梯度连接
         # update the latent based on the predicted noise with the noise schedulers
         # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
 
