@@ -146,6 +146,7 @@ class EditorManager:
 
         # get basic editing arguments
         source_image = cfg["editor"].pop("source_image")
+        sketch_image = cfg["editor"].pop("sketch_image", None)
         source_prompt = cfg["editor"].pop("source_prompt")
         target_prompt = cfg["editor"].pop("target_prompt")
 
@@ -168,7 +169,8 @@ class EditorManager:
 
         enable_deterministic()
         image = self.preproc(source_image)
-        edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg)
+        sketch = self.preproc(sketch_image) if sketch_image is not None else None
+        edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch)
         img_edit = self.postproc(edit_res["image"])
 
         self.cfg = cfg

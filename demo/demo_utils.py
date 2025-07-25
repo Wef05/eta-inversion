@@ -127,6 +127,9 @@ class Demo:
             np.ndarray: Edited image result.
         """
 
+        # 如果用户上传了 sketch，就添加到配置
+        if cfg.get("editor.sketch_image") is not None:
+            cfg["sketch_image"] = cfg["editor.sketch_image"]
         edit_res = self.editor_manager.run(cfg)
         
         return edit_res["edit_image"]
@@ -138,6 +141,17 @@ class Demo:
         with gr.Row():
             self.inputs["editor.source_image"] = gr.Image(label="Input", value="test/data/house.png", width=512, height=512)
             self.outputs["edit_image"] = gr.Image(label="Output", width=512, height=512)
+
+        with gr.Row():  # ← 新增
+            self.inputs["editor.sketch_image"] = gr.Image(  # ← 新增
+                label="Optional Sketch",
+                type="numpy",
+                width=512, height=512,
+                value=None,
+                image_mode="L",  # 灰度草图
+                tool="editor",  # 允许简单编辑
+                optional=True  # ← 可选上传
+            )
 
     def build_model(self) -> None:
         """Builds gradio components for model select.
