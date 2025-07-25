@@ -167,7 +167,7 @@ class EtaInversion(DiffusionInversion):
         self.seed = seed if seed >= 0 else None
 
         #实例anti_gradient
-        self.anti_gradient = AntiGradientPipeline(self.model)
+        self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
     def sample_variance_noise(self, n: int, generator: Optional[torch.Generator]=None) -> torch.Tensor:
         """_summary_
 
