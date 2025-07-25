@@ -135,7 +135,8 @@ class EtaInversion(DiffusionInversion):
             guidance_scale_fwd = np.linspace(guidance_scale_fwd[0], guidance_scale_fwd[1], num_train_steps)
 
         super().__init__(model, scheduler, num_inference_steps, guidance_scale_bwd, guidance_scale_fwd, verbose)
-
+        #实例anti_gradient
+        self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
         if eta_start is not None:
             # for gradio
             assert eta_end is not None
@@ -166,8 +167,7 @@ class EtaInversion(DiffusionInversion):
 
         self.seed = seed if seed >= 0 else None
 
-        #实例anti_gradient
-        self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
+
     def sample_variance_noise(self, n: int, generator: Optional[torch.Generator]=None) -> torch.Tensor:
         """_summary_
 
