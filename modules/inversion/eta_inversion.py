@@ -288,7 +288,7 @@ class EtaInversion(DiffusionInversion):
         # eta_res = self.compute_best_eta(source_latent_prev, latent[:1], t, noise_pred[:1], generator, mask=None)
         variance_noise = eta_res["variance_noise"]
         eta = torch.full_like(variance_noise, eta_res["eta"])
-
+        #print(f"{t}")
         if self.mask_mode_cfg is not None:
             mask_eta = self.get_mask("mask_eta", mask, t, edit_word_idx)
             mask_dirinv = self.get_mask("mask_dirinv", mask, t, edit_word_idx)
@@ -360,13 +360,12 @@ class EtaInversion(DiffusionInversion):
 
         #setup AntiGradient
         self.anti_gradient.setup()
-        latent = latent.requires_grad_(True) #保留latent梯度
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
+            latent = latent.requires_grad_(True)  # 保留latent梯度
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=inv_result["zT_inv"])
             latent = latent.detach()#断开
-            latent.requires_grad_(True)  # 保留梯度
             del noise_pred
             torch.cuda.empty_cache()  # 可选：清理已释放但仍保留的碎片
         return latent

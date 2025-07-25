@@ -243,8 +243,7 @@ def register_attention_control(model: StableDiffusionPipeline, controller: Optio
                 mask = mask[:, None, :].repeat(h, 1, 1)
                 sim.masked_fill_(~mask, max_neg_value)
             # attention, what we cannot get enough of
-            #attn = sim.softmax(dim=-1).clone()
-            attn = sim.softmax(dim=-1)
+            attn = sim.softmax(dim=-1).clone()
             # print(torch.sum(attn.reshape(attn.shape[0], -1), 1))
             # attn_old = attn.clone()
             attn = controller(attn, is_cross, place_in_unet)
