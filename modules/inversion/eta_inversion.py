@@ -327,8 +327,14 @@ class EtaInversion(DiffusionInversion):
             #TBD
             '''
             sketch = self.encode(sketch.to(self.model.device))
-            # opx = Image.fromarray(decode_latents(sketch))
-            # opx.save("output_encoded.png")
+            decoded_sketch = self.decode(sketch)
+            sketch_np = decoded_sketch[0].cpu().permute(1, 2, 0).numpy()
+            if sketch_np.max() <= 1.0:
+                sketch_np = (sketch_np * 255).astype(np.uint8)
+            else:
+                sketch_np = sketch_np.astype(np.uint8)
+            opx = Image.fromarray(sketch_np)
+            opx.save("output_encoded.png")
             with ctx:
                     anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,0.5)
                     if t >= 500:
