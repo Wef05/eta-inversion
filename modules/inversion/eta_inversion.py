@@ -274,7 +274,9 @@ class EtaInversion(DiffusionInversion):
         latent = self.controller.begin_step(latent=latent, t=t)
 
         # make a noise prediction using UNet
-        noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
+        ctx = torch.enable_grad()
+        with ctx:
+            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
 
         # get best eta and variance noise
         eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
@@ -324,7 +326,9 @@ class EtaInversion(DiffusionInversion):
             # opx = Image.fromarray(decode_latents(sketch))
             # opx.save("output_encoded.png")
             # apply_anti_gradient(latent_model_input, latents, zT,sketch_image, t, 1.6)
-            new_latent[1:2] = self.anti_gradient.apply_anti_gradient(latent[1:2], new_latent[1:2],zT,sketch,t,1.6)
+            with ctx:
+                anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,1.6)
+            new_latent[1:2] = anti_latent
         # update the latent based on the predicted noise with the noise schedulers
         # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
 
@@ -353,6 +357,7 @@ class EtaInversion(DiffusionInversion):
 
         #setup AntiGradient
         self.anti_gradient.setup()
+        latent = latent.requires_grad_(True) #保留latent梯度
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
