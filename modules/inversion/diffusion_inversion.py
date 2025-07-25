@@ -349,7 +349,7 @@ class DiffusionInversion:
 
         return new_latent, noise_pred
 
-    def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale_bwd: Optional[float]=None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale_bwd: Optional[float]=None, source_latent_prev=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one backward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.
 
         Args:
@@ -372,6 +372,7 @@ class DiffusionInversion:
 
         # update the latent based on the predicted noise with the noise schedulers
         new_latent = self.step_backward(noise_pred, t, latent).prev_sample
+        new_latent[:1] = source_latent_prev[:1]#修改
 
         # call controller callback to modify latent (e.g. ptp)
         new_latent = self.controller.end_step(latent=new_latent, noise_pred=noise_pred, t=t)
@@ -440,7 +441,7 @@ class DiffusionInversion:
 
         for i, t in enumerate(self.pbar(self.get_timesteps_backward(), desc="backward")):
             # iterate over all timesteps and gradually denoise latent
-            latent, noise_pred = self.predict_step_backward(latent, t, context)
+            latent, noise_pred = self.predict_step_backward(latent, t, context,source_latent_prev=inv_result["latents"][-(i+2)])#修改
             
         return latent
 

@@ -227,7 +227,7 @@ class EtaInversion(DiffusionInversion):
         return mask
 
     def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale_bwd: Optional[float]=None, 
-                              source_latent_prev=None, generator=None, mask=None, edit_word_idx=None) -> Tuple[torch.Tensor, torch.Tensor]:
+                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one backward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.
 
         Args:
@@ -251,7 +251,7 @@ class EtaInversion(DiffusionInversion):
         noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
 
         # get best eta and variance noise
-        eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], generator)
+        eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
 
         # eta_res = self.compute_best_eta(source_latent_prev, latent[:1], t, noise_pred[:1], generator, mask=None)
         variance_noise = eta_res["variance_noise"]
@@ -310,7 +310,7 @@ class EtaInversion(DiffusionInversion):
 
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             # pass noise loss
-            latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], 
+            latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx)
             
         return latent
@@ -349,7 +349,7 @@ class EtaInversion(DiffusionInversion):
 
         return noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
 
-    def get_eta_variance_noise(self, latent_prev: torch.Tensor, latent: torch.Tensor, t: int, noise_pred: torch.Tensor, generator: Optional[torch.Generator]=None) -> Dict[str, Any]:
+    def get_eta_variance_noise(self, latent_prev: torch.Tensor, latent: torch.Tensor, t: int, noise_pred: torch.Tensor,forward_noise:torch.Tensor,generator: Optional[torch.Generator]=None ) -> Dict[str, Any]:
         """Retrieves eta and computes best variance noise.
 
         Args:
