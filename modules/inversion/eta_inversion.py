@@ -375,7 +375,10 @@ class EtaInversion(DiffusionInversion):
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=inv_result["zT_inv"])
-            
+            latent = latent.detach()#断开
+            latent.requires_grad_(True)  # 保留梯度
+            del noise_pred
+            torch.cuda.empty_cache()  # 可选：清理已释放但仍保留的碎片
         return latent
 
     def compute_optimal_variance_noise(self, latent_prev: torch.Tensor, latent: torch.Tensor, t: int, eta: float, noise_pred: torch.Tensor) -> torch.Tensor:
