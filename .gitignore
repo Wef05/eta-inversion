@@ -1,4 +1,5 @@
 __pycache__
+miniconda.sh
 .vscode
 /data
 result/
@@ -12,3 +13,5 @@ build
 bak/
 !docs/images/teaser.jpg
 /untracked
+.DS_Store
+.idea
