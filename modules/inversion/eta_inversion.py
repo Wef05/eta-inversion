@@ -1,4 +1,5 @@
 import time
+from sympy.solvers.solveset import invert_real
 from tqdm import tqdm
 
 from modules.editing.ptp_editor import PromptToPromptControllerAttentionStore
@@ -15,6 +16,7 @@ from typing import Dict, List, Optional, Union, Any, Tuple
 from itertools import product
 import torchvision
 
+from modules.sketch.AntiGradient import AntiGradientPipeline
 
 import os
 import matplotlib.pyplot as plt
@@ -164,6 +166,8 @@ class EtaInversion(DiffusionInversion):
 
         self.seed = seed if seed >= 0 else None
 
+        #实例anti_gradient
+        self.anti_gradient = AntiGradientPipeline(self.model)
     def sample_variance_noise(self, n: int, generator: Optional[torch.Generator]=None) -> torch.Tensor:
         """_summary_
 
@@ -306,6 +310,20 @@ class EtaInversion(DiffusionInversion):
             new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise).prev_sample
             new_latent[:1] = eta_res["latent_prev"][:1]
 
+        # AntiGradient
+        if sketch is not None and True:
+            #TBD t在前半段时才生效 地图开关
+            '''
+            gsimg = Image.fromarray(spimg)
+            tensor_img = torch.tile(transforms(gsimg), (3, 1, 1)).unsqueeze(0)
+            (原实现，spimg为img）
+            这次假设eta-inversion对img的初始化与其相同，sketch为tensor
+            #TBD
+            '''
+            sketch = self.encode(sketch.to(self.model.device))
+            # opx = Image.fromarray(decode_latents(sketch))
+            # opx.save("output_encoded.png")
+            latent[1:2] = self.anti_gradient.apply_anti_gradient(latent, noise_pred, t, sketch, 1.6)
         # update the latent based on the predicted noise with the noise schedulers
         # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
 
@@ -332,6 +350,8 @@ class EtaInversion(DiffusionInversion):
         if mask is not None:
             mask = F.interpolate(mask[None, None], (64, 64), mode="bilinear")[0].to(latent.dtype).to(self.model.device)
 
+        #setup AntiGradient
+        self.anti_gradient.setup()
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
