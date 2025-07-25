@@ -441,7 +441,7 @@ class DiffusionInversion:
 
         for i, t in enumerate(self.pbar(self.get_timesteps_backward(), desc="backward")):
             # iterate over all timesteps and gradually denoise latent
-            latent, noise_pred = self.predict_step_backward(latent, t, context,source_latent_prev=inv_result["latents"][-(i+2)])#修改
+            latent, noise_pred = self.predict_step_backward(latent, t, context,source_latent_prev=inv_result["latents"][-(i+2)])
             
         return latent
 
