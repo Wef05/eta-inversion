@@ -27,10 +27,15 @@ os.system("rm -rf result/pie_eta_new/*")
 
 import cv2
 import torch
+
 def safe_filename(s: str) -> str:
     """把字符串转成安全文件名：去掉非字母数字下划线字符。"""
     return re.sub(r'[^a-zA-Z0-9_]', '_', s)
-
+def printM():
+    allocated = torch.cuda.memory_allocated() / 1024 ** 3
+    reserved = torch.cuda.memory_reserved() / 1024 ** 3
+    print(f"当前已分配显存: {allocated:.2f} GB")
+    print(f"当前已保留显存: {reserved:.2f} GB")
 def to_4ch(attn_map):
     """
     把注意力张量统一成 [1,4,H,W] 形式，方便后续 overlay。
@@ -136,7 +141,7 @@ class EtaInversion(DiffusionInversion):
 
         super().__init__(model, scheduler, num_inference_steps, guidance_scale_bwd, guidance_scale_fwd, verbose)
         #实例anti_gradient
-        self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
+        #self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
         if eta_start is not None:
             # for gradio
             assert eta_end is not None
@@ -272,12 +277,15 @@ class EtaInversion(DiffusionInversion):
 
         # call controller callback (e.g. ptp)
         latent = self.controller.begin_step(latent=latent, t=t)
-
+        print("1————————————————————————————————————:")
+        printM()
         # make a noise prediction using UNet
         ctx = torch.enable_grad()
+        ctx = torch.no_grad()
         with ctx:
             noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
-
+        print("2————————————————————————————————————:")
+        printM()
         # get best eta and variance noise
         eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
 
@@ -326,9 +334,14 @@ class EtaInversion(DiffusionInversion):
             # opx = Image.fromarray(decode_latents(sketch))
             # opx.save("output_encoded.png")
             # apply_anti_gradient(latent_model_input, latents, zT,sketch_image, t, 1.6)
-            with ctx:
-                anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,1.6)
-            new_latent[1:2] = anti_latent
+            print("3:————————————————————————————————————")
+            printM()
+            # with ctx:
+            #     anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,1.6)
+            # print(f"t:{t}")
+            # print("4:————————————————————————————————————")
+            # printM()
+            # new_latent[1:2] = anti_latent[1:2]
         # update the latent based on the predicted noise with the noise schedulers
         # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
 
@@ -356,7 +369,7 @@ class EtaInversion(DiffusionInversion):
             mask = F.interpolate(mask[None, None], (64, 64), mode="bilinear")[0].to(latent.dtype).to(self.model.device)
 
         #setup AntiGradient
-        self.anti_gradient.setup()
+        #self.anti_gradient.setup()
         latent = latent.requires_grad_(True) #保留latent梯度
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             # pass noise loss
