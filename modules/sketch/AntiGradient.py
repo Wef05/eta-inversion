@@ -48,10 +48,6 @@ class AntiGradientPipeline(DiffusionInversion):
         intermediate_result = torch.cat(intermediate_result, dim=1)
         estimate_noise = self.get_noise_level(zT, timestep)
         outputs = self.lgp_model(intermediate_result, torch.cat([estimate_noise] * 2))
-        # outputs = self.lgp_model(
-        #     intermediate_result.to(self.model.unet.dtype),
-        #     torch.cat([estimate_noise] * 2).to(self.model.unet.dtype)
-        # )
         b, _, h, w = latents_prev.shape
         _, outputs = rearrange(outputs, "(b w h) c -> b c h w", b=b, h=h, w=w).chunk(2)
         loss = F.mse_loss(sketch_image.float(), outputs.float(), reduction="mean")
