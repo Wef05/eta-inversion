@@ -9,7 +9,7 @@ class AntiGradientPipeline(DiffusionInversion):
     lgp_model = None
     def setup(self):
         lgp =  LatentEdgePredictor(9320, 4, 9)
-        lgp.load_state_dict(torch.load("/edge_predictor.pt"))
+        lgp.load_state_dict(torch.load("edge_predictor.pt"))
         lgp.to(self.model.unet.device, dtype=self.model.unet.dtype)
         self.lgp_model: LatentEdgePredictor = lgp
         self.feature_blocks = hook_unet(self.model.unet)
