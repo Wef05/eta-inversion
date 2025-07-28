@@ -402,6 +402,8 @@ class EtaInversion(DiffusionInversion):
         return noise_opt
 
     def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False, **kwargs) -> torch.Tensor:
+        # context      ： sn       sp       tn      tp
+        # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
         noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
 

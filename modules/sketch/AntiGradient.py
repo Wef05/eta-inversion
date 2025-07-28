@@ -11,7 +11,7 @@ def printM():
 class AntiGradientPipeline(DiffusionInversion):
     def __init__(self, model, scheduler):
         self.model = model
-        self.scheduler = scheduler  # 添加这一行
+        self.scheduler = scheduler
         self.feature_blocks = None
         self.lgp_model = None
     def setup(self):
@@ -54,6 +54,14 @@ class AntiGradientPipeline(DiffusionInversion):
         outputs = self.lgp_model(intermediate_result, torch.cat([estimate_noise] * 2))
         b, _, h, w = latents_prev.shape
         _, outputs = rearrange(outputs, "(b w h) c -> b c h w", b=b, h=h, w=w).chunk(2)
+        # 保存outputs为图片
+        import torchvision.utils as vutils
+        import os
+        save_dir = "outputs_images"
+        os.makedirs(save_dir, exist_ok=True)
+        outputs_img = self.decode(outputs)
+        vutils.save_image(outputs_img.float().cpu(),
+                          os.path.join(save_dir, f"output_{len(os.listdir(save_dir)) + 1}.png"))
         loss = F.mse_loss(sketch_image.float(), outputs.float(), reduction="mean")
         _, cond_grad = (-torch.autograd.grad(loss, latents_prev)[0]).chunk(2)
         alpha = torch.linalg.norm(latents_prev - latents) / torch.linalg.norm(cond_grad) * beta
