@@ -259,7 +259,7 @@ class EtaInversion(DiffusionInversion):
         return mask
 
     def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor,guidance_scale_bwd: Optional[float]=None,
-                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None,zT=None) -> Tuple[torch.Tensor, torch.Tensor]:
+                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None,zT=None,enable_grad=False) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one backward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.
 
         Args:
@@ -279,7 +279,7 @@ class EtaInversion(DiffusionInversion):
         # call controller callback (e.g. ptp)
         latent = self.controller.begin_step(latent=latent, t=t)
         # make a noise prediction using UNet
-        ctx = torch.enable_grad() if sketch is not None else torch.no_grad()
+        ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
             noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
         # get best eta and variance noise
@@ -316,6 +316,7 @@ class EtaInversion(DiffusionInversion):
             new_latent[:1] = eta_res["latent_prev"][:1]
 
         # AntiGradient
+        if sketch is not None:
             '''
             gsimg = Image.fromarray(spimg)
             tensor_img = torch.tile(transforms(gsimg), (3, 1, 1)).unsqueeze(0)
@@ -330,9 +331,9 @@ class EtaInversion(DiffusionInversion):
                 sketch_np = sketch_np.astype(np.uint8)
             opx = Image.fromarray(sketch_np)
             opx.save("output_encoded.png")
-            with ctx:
-                    anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,0.1)
-                    if t >= 500:
+            if enable_grad:
+                with ctx:
+                        anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,3)
                         new_latent[1:2] = anti_latent[1:2]
         #new_latent = new_latent.detach()  # 断开梯度连接
         # update the latent based on the predicted noise with the noise schedulers
@@ -363,13 +364,17 @@ class EtaInversion(DiffusionInversion):
 
         #setup AntiGradient
         self.anti_gradient.setup()
+        zT = inv_result["zT_inv"].clone() if inv_result["zT_inv"] is not None else None
         print(f"总时间步数: {len(self.scheduler_bwd.timesteps)}")
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
-            latent = latent.requires_grad_(True)  # 保留latent梯度
             print(f"当前时间步: {t}")
+            enable_grad = False
+            if t >= 750 and sketch is not None:
+                enable_grad = True
+                latent = latent.requires_grad_(True)  # 保留latent梯度
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
-                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=inv_result["zT_inv"])
+                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=zT,enable_grad=enable_grad)
             latent = latent.detach()#断开
             del noise_pred
             self.anti_gradient.clear()
