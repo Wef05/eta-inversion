@@ -288,7 +288,6 @@ class EtaInversion(DiffusionInversion):
         # eta_res = self.compute_best_eta(source_latent_prev, latent[:1], t, noise_pred[:1], generator, mask=None)
         variance_noise = eta_res["variance_noise"]
         eta = torch.full_like(variance_noise, eta_res["eta"])
-        #print(f"{t}")
         if self.mask_mode_cfg is not None:
             mask_eta = self.get_mask("mask_eta", mask, t, edit_word_idx)
             mask_dirinv = self.get_mask("mask_dirinv", mask, t, edit_word_idx)
@@ -317,14 +316,10 @@ class EtaInversion(DiffusionInversion):
             new_latent[:1] = eta_res["latent_prev"][:1]
 
         # AntiGradient
-        if sketch is not None and True:
-            #TBD t在前半段时才生效 地图开关
             '''
             gsimg = Image.fromarray(spimg)
             tensor_img = torch.tile(transforms(gsimg), (3, 1, 1)).unsqueeze(0)
             (原实现，spimg为img）
-            这次假设eta-inversion对img的初始化与其相同，sketch为tensor
-            #TBD
             '''
             sketch = self.encode(sketch.to(self.model.device))
             decoded_sketch = self.decode(sketch)
@@ -368,8 +363,10 @@ class EtaInversion(DiffusionInversion):
 
         #setup AntiGradient
         self.anti_gradient.setup()
+        print(f"总时间步数: {len(self.scheduler_bwd.timesteps)}")
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             latent = latent.requires_grad_(True)  # 保留latent梯度
+            print(f"当前时间步: {t}")
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=inv_result["zT_inv"])
