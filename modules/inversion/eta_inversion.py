@@ -322,7 +322,15 @@ class EtaInversion(DiffusionInversion):
             tensor_img = torch.tile(transforms(gsimg), (3, 1, 1)).unsqueeze(0)
             (原实现，spimg为img）
             '''
-            sketch = self.encode(sketch.to(self.model.device))
+            # 保存 sketch（1, 3, 64, 64）tensor 为图片
+            sketch_img = sketch[0].detach().cpu().permute(1, 2, 0).numpy()
+            if sketch_img.max() <= 1.0:
+                sketch_img = (sketch_img * 255).astype(np.uint8)
+            else:
+                sketch_img = sketch_img.astype(np.uint8)
+            Image.fromarray(sketch_img).save("output_sketch.png")
+            sketch = self.encode(0-sketch.to(self.model.device))
+            #反转sketch
             decoded_sketch = self.decode(sketch)
             sketch_np = decoded_sketch[0].cpu().permute(1, 2, 0).numpy()
             if sketch_np.max() <= 1.0:
