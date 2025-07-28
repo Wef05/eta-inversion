@@ -67,3 +67,7 @@ class AntiGradientPipeline(DiffusionInversion):
         alpha = torch.linalg.norm(latents_prev - latents) / torch.linalg.norm(cond_grad) * beta
         return latents + alpha * cond_grad
 
+    def clear(self):
+        for block in self.feature_blocks:
+            if hasattr(block, "output"):
+                del block.output
