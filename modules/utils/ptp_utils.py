@@ -28,7 +28,11 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import Stabl
 from modules.utils.ptp import AttentionReweight
 from numpy import ndarray
 from transformers.models.clip.tokenization_clip import CLIPTokenizer
-
+def printM():
+    allocated = torch.cuda.memory_allocated() / 1024 ** 3
+    reserved = torch.cuda.memory_reserved() / 1024 ** 3
+    #print(f"当前已分配显存: {allocated:.2f} GB")
+    #print(f"当前已保留显存: {reserved:.2f} GB")
 
 def slerp(val, low, high):
     """ taken from https://discuss.pytorch.org/t/help-regarding-slerp-function-for-generative-model-sampling/32475/4
@@ -211,13 +215,11 @@ def register_attention_control(model: StableDiffusionPipeline, controller: Optio
                 to_out = self.to_out[0]
             else:
                 to_out = self.to_out
-
             # for different diffuser versions
             if encoder_hidden_states is not None:
                 context = encoder_hidden_states
             if attention_mask is not None:
                 mask = attention_mask
-
             batch_size, sequence_length, dim = x.shape
             h = self.heads
             q = self.to_q(x)
@@ -225,7 +227,6 @@ def register_attention_control(model: StableDiffusionPipeline, controller: Optio
             context = context if is_cross else x
             k = self.to_k(context)
             v = self.to_v(context)
-
             if hasattr(self, "reshape_heads_to_batch_dim"):  # old diffusers
                 q = self.reshape_heads_to_batch_dim(q)
                 k = self.reshape_heads_to_batch_dim(k)
@@ -236,15 +237,13 @@ def register_attention_control(model: StableDiffusionPipeline, controller: Optio
                 v = self.head_to_batch_dim(v)
 
             sim = torch.einsum("b i d, b j d -> b i j", q, k) * self.scale
-
             if mask is not None:
                 mask = mask.reshape(batch_size, -1)
                 max_neg_value = -torch.finfo(sim.dtype).max
                 mask = mask[:, None, :].repeat(h, 1, 1)
                 sim.masked_fill_(~mask, max_neg_value)
-
             # attention, what we cannot get enough of
-            attn = sim.softmax(dim=-1)
+            attn = sim.softmax(dim=-1).clone()
             # print(torch.sum(attn.reshape(attn.shape[0], -1), 1))
             # attn_old = attn.clone()
             attn = controller(attn, is_cross, place_in_unet)
@@ -256,7 +255,6 @@ def register_attention_control(model: StableDiffusionPipeline, controller: Optio
                 out = self.reshape_batch_dim_to_heads(out)
             else:
                 out = self.batch_to_head_dim(out)
-
             return to_out(out)
         
     # class DummyController:

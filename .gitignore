@@ -4,6 +4,7 @@ miniconda.sh
 /data
 result/
 env/
+outputs_images/
 src/
 *.so
 /*.png
