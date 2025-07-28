@@ -12,3 +12,4 @@ build
 bak/
 !docs/images/teaser.jpg
 /untracked
+.DS_Store
