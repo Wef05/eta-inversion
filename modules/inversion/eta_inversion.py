@@ -375,6 +375,7 @@ class EtaInversion(DiffusionInversion):
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=inv_result["zT_inv"])
             latent = latent.detach()#断开
             del noise_pred
+            self.anti_gradient.clear()
             torch.cuda.empty_cache()  # 可选：清理已释放但仍保留的碎片
         return latent
 
