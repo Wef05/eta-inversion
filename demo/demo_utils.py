@@ -150,7 +150,38 @@ class Demo:
                 value=None,
                 image_mode="RGB",  # 灰度草图
                 tool="editor",  # 允许简单编辑
-                optional=True  # ← 可选上传
+            )
+            self.inputs["editor.sketch_mask"] = gr.Image(  # ← 新增
+                label="Optional Sketch mask",
+                type="numpy",
+                width=512, height=512,
+                value=None,
+                image_mode="RGB",  # 灰度草图
+                tool="editor",  # 允许简单编辑
+            )
+        with gr.Row():
+            self.inputs["editor.s2i_endT"] = gr.Slider(
+                label="s2i_endT",
+                minimum=0,
+                maximum=1000,
+                value=500,
+                step=10
+            )
+        with gr.Row():
+            self.inputs["editor.s2i_beta"] = gr.Slider(
+                label="s2i_beta",
+                minimum=0,
+                maximum=10,
+                value=1.6,
+                step=0.01
+            )
+        with gr.Row():
+            self.inputs["editor.sigma"] = gr.Slider(
+                label="sigma",
+                minimum=0,
+                maximum=1,
+                value=1,
+                step=0.01
             )
 
     def build_model(self) -> None:

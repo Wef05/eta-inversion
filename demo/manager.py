@@ -3,12 +3,21 @@ enable_deterministic()
 
 import torch
 
+from PIL import Image
 from modules import load_inverter, load_editor
 from modules import load_diffusion_model
 from typing import Dict, Any, List
 
+from torchvision import transforms
 
 # 
+transforms = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Normalize([0.5], [0.5]),
+    ]
+)
+#
 def dict_set_deep(dic: Dict[str, Any], key: str, val: Any) -> None:
     """Sets a key with "." separators in a nested dict.
 
@@ -147,8 +156,12 @@ class EditorManager:
         # get basic editing arguments
         source_image = cfg["editor"].pop("source_image")
         sketch_image = cfg["editor"].pop("sketch_image", None)
+        sketch_mask = cfg["editor"].pop("sketch_mask", None)
         source_prompt = cfg["editor"].pop("source_prompt")
         target_prompt = cfg["editor"].pop("target_prompt")
+        s2i_endT = cfg["editor"].pop("s2i_endT", 500)
+        s2i_beta = cfg["editor"].pop("s2i_beta", 0.5)
+        sigma = cfg["editor"].pop("sigma", 1)
 
         # reload components if config changed
         if not dict_equal(cfg["model"], self.cfg.get("model", None)):
@@ -169,8 +182,15 @@ class EditorManager:
 
         enable_deterministic()
         image = self.preproc(source_image)
-        sketch = self.preproc(sketch_image) if sketch_image is not None else None
-        edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch)
+        #sketch = self.preproc(sketch_image) if sketch_image is not None else None
+        sketch = None
+        if sketch_image is not None:
+            # gsimg = Image.fromarray(sketch_image)
+            # sketch = transforms(gsimg).unsqueeze(0)
+            # 反转sketch黑白
+            sketch_image = 255 - sketch_image
+            sketch = self.preproc(sketch_image)
+        edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch,s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
         img_edit = self.postproc(edit_res["image"])
 
         self.cfg = cfg

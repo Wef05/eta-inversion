@@ -2,6 +2,8 @@ import contextlib
 import torch
 from tqdm import tqdm
 
+import numpy as np
+from PIL import Image
 from diffusers import DDIMScheduler, DDPMScheduler, DPMSolverMultistepScheduler
 from modules.inverse_schedulers import DiffusionInverseScheduler, DDIMInverseScheduler, DPMSolverMultistepInverseScheduler, DDPMInverseScheduler
 from ..editing.controller import ControllerBase, ControllerEmpty
@@ -501,7 +503,7 @@ class DiffusionInversion:
         return torch.cat(latents)
 
     def sample(self, inv_result: Dict[str, Any], prompt: Optional[Union[str, List[str]]]=None, 
-               context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None,sketch = None) -> Dict[str, Any]:
+               context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None,sketch = None,s2i_endT=None,s2i_beta=None,sigma=None) -> Dict[str, Any]:
         """Sample an image from the inversion result.
 
         Args:
@@ -528,7 +530,7 @@ class DiffusionInversion:
             latent = self.cat_latent([latent] * num_prompts)
 
         # denoise
-        z0 = self.diffusion_backward(latent, context, inv_result,sketch=sketch)
+        z0 = self.diffusion_backward(latent, context, inv_result,sketch=sketch,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma)
 
         if z0 is None:
             return None
