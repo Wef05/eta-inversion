@@ -47,7 +47,7 @@ class AntiGradientPipeline(DiffusionInversion):
         variance = self._get_variance(timestep, prev_timestep)
 
         return eta * variance ** (0.5)
-    def save_output(self,outputs, name):
+    def save_output(self,outputs, name,mask=None):
         # 保存outputs为图片
         import os
         import torchvision.utils as vutils
@@ -58,10 +58,16 @@ class AntiGradientPipeline(DiffusionInversion):
         #                  os.path.join(save_dir, f"output_{len(os.listdir(save_dir)) + 1}.png"))
         vutils.save_image(outputs_img.float().cpu(),
                          os.path.join(save_dir, f"output.png"))
+        if mask is not None:
+            outputs_img = self.decode(outputs*mask)
+            # vutils.save_image(outputs_img.float().cpu(),
+            #                  os.path.join(save_dir, f"output_{len(os.listdir(save_dir)) + 1}.png"))
+            vutils.save_image(outputs_img.float().cpu(),
+                              os.path.join(save_dir, f"output_masked.png"))
     def predict_output(self,latents_prev, latents, zT, timestep, eta, num_inference_steps):
         intermediate_result = []
         for block in self.feature_blocks:
-            resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")[2:4]#对 block.output 进行上采样（插值），使其空间尺寸与 latents 的第三个维度相同
+            resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")[[1, 3]]#对 block.output 进行上采样（插值），使其空间尺寸与 latents 的第三个维度相同
             intermediate_result.append(resized)
             del block.output
         intermediate_result = torch.cat(intermediate_result, dim=1)
@@ -85,14 +91,14 @@ class AntiGradientPipeline(DiffusionInversion):
             latents = self.apply_anti_gradient(latent_model_input, latents, zT,sketch_image, t, 1.6)
         """
         outputs = self.predict_output(latents_prev, latents, zT, timestep, eta, num_inference_steps)
-        self.save_output(outputs,"outputs")
-        self.save_output(sketch_image,"sketch_image")
+        self.save_output(outputs,"outputs",mask)
+        self.save_output(sketch_image,"sketch_image",mask)
         re = None
         if mask is not None:
             loss = torch.sum(((sketch_image*mask).float() - (outputs*mask).float()) ** 2)
             _, cond_grad = (-torch.autograd.grad(loss, latents_prev)[0]).chunk(2)
             alpha = torch.linalg.norm(latents_prev - latents) / torch.linalg.norm(cond_grad) * beta
-            re = latents + alpha * cond_grad * mask
+            re = latents + alpha * cond_grad
         else:
             loss = torch.sum(((sketch_image).float() - (outputs).float()) ** 2)
             _, cond_grad = (-torch.autograd.grad(loss, latents_prev)[0]).chunk(2)

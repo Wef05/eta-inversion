@@ -305,7 +305,7 @@ class EtaInversion(DiffusionInversion):
             if enable_grad:
                 with ctx:
                         anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,s2i_beta,eta,self.num_inference_steps,mix_mask)
-                        #new_latent[1:2] = anti_latent[1:2]
+                        new_latent[1:2] = anti_latent[1:2]
                         #new_latent = anti_latent
         #new_latent[:1] = eta_res["latent_prev"][:1]
         #delta = eta_res["latent_prev"][:1] - new_latent[:1]
@@ -384,7 +384,7 @@ class EtaInversion(DiffusionInversion):
         return noise_opt
 
     def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False,inv_result=None,i=None,**kwargs) -> torch.Tensor:
-        # context      ： sn       sp       tn      tp
+        # context      ： su       tu       sc       tc
         # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
         noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
