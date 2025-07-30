@@ -101,7 +101,7 @@ class StablePostProc:
         return image[0]
 
 
-def load_diffusion_model(model: str="CompVis/stable-diffusion-v1-4", device: str="cuda", 
+def load_diffusion_model(model: str="runwayml/stable-diffusion-v1-5", device: str="cuda",
                          preproc_args: Optional[Dict[str, Any]]=None, variant=None, **kwargs,
                          ) -> Tuple[StableDiffusionPipeline, StablePreprocess, StablePostProc]:
     """Loads a diffusion model from HuggingFace with respective preprocessing and postprocessing function.
@@ -130,9 +130,9 @@ def load_diffusion_model(model: str="CompVis/stable-diffusion-v1-4", device: str
     elif variant == "fp32":
         pass
 
-    if model in ("sd14", "CompVis/stable-diffusion-v1-4",):
+    if model in ("sd14", "runwayml/stable-diffusion-v1-5",):
         scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
-        model = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", scheduler=scheduler, **diffusers_kwargs).to(device)
+        model = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", scheduler=scheduler, **diffusers_kwargs).to(device)
         return model, (StablePreprocess(device, size=512, **(preproc_args if preproc_args is not None else {})), StablePostProc())
     else:
         raise Exception(model)
