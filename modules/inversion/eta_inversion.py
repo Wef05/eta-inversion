@@ -259,7 +259,7 @@ class EtaInversion(DiffusionInversion):
         return mask
 
     def predict_step_backward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor,guidance_scale_bwd: Optional[float]=None,
-                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None,zT=None,enable_grad=False,s2i_beta=None,sigma=None) -> Tuple[torch.Tensor, torch.Tensor]:
+                              source_latent_prev=None,forward_noise=None,generator=None, mask=None, edit_word_idx=None,sketch=None,zT=None,enable_grad=False,s2i_beta=None,sigma=None,inv_result=None,i=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one backward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.
 
         Args:
@@ -281,7 +281,7 @@ class EtaInversion(DiffusionInversion):
         # make a noise prediction using UNet
         ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
-            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd)
+            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,inv_result=inv_result,i=i)
         # get best eta and variance noise
         eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
 
@@ -353,7 +353,7 @@ class EtaInversion(DiffusionInversion):
                 latent = latent.requires_grad_(True)  # 保留latent梯度
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
-                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=zT,enable_grad=enable_grad,s2i_beta=s2i_beta,sigma=sigma)
+                                                            generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=zT,enable_grad=enable_grad,s2i_beta=s2i_beta,sigma=sigma,inv_result=inv_result,i=i)
             latent = latent.detach()#断开
             del noise_pred
             self.anti_gradient.clear()
@@ -383,7 +383,7 @@ class EtaInversion(DiffusionInversion):
 
         return noise_opt
 
-    def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False, **kwargs) -> torch.Tensor:
+    def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False,inv_result=None,i=None,**kwargs) -> torch.Tensor:
         # context      ： sn       sp       tn      tp
         # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
@@ -393,7 +393,8 @@ class EtaInversion(DiffusionInversion):
             guidance_scale = self.guidance_scale_fwd
         if isinstance(guidance_scale, (tuple, list, dict, np.ndarray)):
             guidance_scale = guidance_scale[t.item()]  # get per timestep scale
-
+        # if inv_result is not None:
+        #     noise_pred_uncond = inv_result["noise_preds"][-(i+1)]
         return noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
 
     def get_eta_variance_noise(self, latent_prev: torch.Tensor, latent: torch.Tensor, t: int, noise_pred: torch.Tensor,forward_noise:torch.Tensor,generator: Optional[torch.Generator]=None ) -> Dict[str, Any]:
