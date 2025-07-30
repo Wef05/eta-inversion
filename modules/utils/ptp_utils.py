@@ -24,6 +24,7 @@ from typing import Optional, Union, Tuple, List, Dict
 from IPython.display import display
 from tqdm.notebook import tqdm
 from diffusers.models.unet_2d_condition import UNet2DConditionOutput
+#from diffusers import UNet2DConditionModel
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from modules.utils.ptp import AttentionReweight
 from numpy import ndarray

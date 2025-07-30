@@ -47,6 +47,7 @@ class LatentEdgePredictor(nn.Module):
         x = torch.cat((x, t, pos_encoding), dim=1)          # 维度: [b, c + 1 + num_layers, h, w]
         x = rearrange(x, "b c h w -> (b w h) c")
         
+        # 8192 X 9320
         return self.layers(x)
     
 def hook_unet(unet: UNet2DConditionModel):
