@@ -101,7 +101,6 @@ class AntiGradientPipeline(DiffusionInversion):
         print(f"pre_Loss: {loss.item()}")
         return re
 
-
     def clear(self):
         for block in self.feature_blocks:
             if hasattr(block, "output"):

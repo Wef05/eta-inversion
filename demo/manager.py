@@ -191,6 +191,7 @@ class EditorManager:
             sketch_image = 255 - sketch_image
             sketch = self.preproc(sketch_image)
         edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch,s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
+
         img_edit = self.postproc(edit_res["image"])
 
         self.cfg = cfg
