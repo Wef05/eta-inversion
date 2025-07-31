@@ -65,7 +65,7 @@ class AntiGradientPipeline(DiffusionInversion):
             #                  os.path.join(save_dir, f"output_{len(os.listdir(save_dir)) + 1}.png"))
             vutils.save_image(outputs_img.float().cpu(),
                               os.path.join(save_dir, f"output_masked.png"))
-        del outputs_img
+            del outputs_img
     def predict_output(self,latents_prev, latents, zT, timestep, eta, num_inference_steps):
         intermediate_result = []
         for block in self.feature_blocks:
