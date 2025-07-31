@@ -414,7 +414,7 @@ class EtaInversion(DiffusionInversion):
         # sample random variance noices
         variance_noise_choices = self.sample_variance_noise(self.noise_sample_count, generator)
         # all possible choices
-        choices = list(product(eta, variance_noise_choices))
+        choices = list(product([eta], variance_noise_choices))
         # compute distance of each sampled noise to the ideal noise
         losses = torch.square(variance_noise_choices - opt_variance_noise).reshape(variance_noise_choices.shape[0], -1).mean(1)
         # select closest noise
