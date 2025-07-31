@@ -76,7 +76,7 @@ class AntiGradientPipeline(DiffusionInversion):
         b, _, h, w = latents_prev.shape
         _, outputs = rearrange(outputs, "(b w h) c -> b c h w", b=b, h=h, w=w).chunk(2)
         return outputs
-    def apply_anti_gradient(self, latents_prev, latents, zT,sketch_image,timestep, beta,eta,num_inference_steps,mask=None):
+    def apply_anti_gradient(self, latents_prev, latents, zT,sketch_image,timestep, beta,eta,num_inference_steps,mask=None,save_output=False):
         """'
         Apply anti-gradient to the latents.(s2i)
         Args:
@@ -91,8 +91,9 @@ class AntiGradientPipeline(DiffusionInversion):
             latents = self.apply_anti_gradient(latent_model_input, latents, zT,sketch_image, t, 1.6)
         """
         outputs = self.predict_output(latents_prev, latents, zT, timestep, eta, num_inference_steps)
-        self.save_output(outputs,"outputs",mask)
-        self.save_output(sketch_image,"sketch_image",mask)
+        if save_output:
+            self.save_output(outputs,"outputs",mask)
+            self.save_output(sketch_image,"sketch_image",mask)
         re = None
         if mask is not None:
             loss = torch.sum(((sketch_image*mask).float() - (outputs*mask).float()) ** 2)
