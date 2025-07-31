@@ -11,9 +11,10 @@ def printM():
     print(f"当前已分配显存: {allocated:.2f} GB")
     print(f"当前已保留显存: {reserved:.2f} GB")
 class AntiGradientPipeline(DiffusionInversion):
-    def __init__(self, model, scheduler):
+    def __init__(self, model, scheduler,unet):
         self.model = model
         self.scheduler = scheduler
+        self.unet = unet
         self.feature_blocks = None
         self.lgp_model = None
         # self.vae = AutoencoderKL.from_pretrained(
@@ -66,10 +67,13 @@ class AntiGradientPipeline(DiffusionInversion):
             vutils.save_image(outputs_img.float().cpu(),
                               os.path.join(save_dir, f"output_masked.png"))
             del outputs_img
-    def predict_output(self,latents_prev, latents, zT, timestep, eta, num_inference_steps):
+    def predict_output(self,latents_prev, latents, zT, timestep, eta, num_inference_steps,op=0):
         intermediate_result = []
         for block in self.feature_blocks:
-            resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")[[1, 3]]#对 block.output 进行上采样（插值），使其空间尺寸与 latents 的第三个维度相同
+            if op == 0:
+                resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")[[1, 3]]#对 block.output 进行上采样（插值），使其空间尺寸与 latents 的第三个维度相同
+            else :
+                resized = F.interpolate(block.output, size=latents.shape[2], mode="bilinear")
             intermediate_result.append(resized)
             del block.output
         intermediate_result = torch.cat(intermediate_result, dim=1)
@@ -78,7 +82,7 @@ class AntiGradientPipeline(DiffusionInversion):
         b, _, h, w = latents_prev.shape
         _, outputs = rearrange(outputs, "(b w h) c -> b c h w", b=b, h=h, w=w).chunk(2)
         return outputs
-    def apply_anti_gradient(self, latents_prev, latents, zT,sketch_latent,timestep, beta,eta,target_context,num_inference_steps,mask=None,save_output=False):
+    def apply_anti_gradient(self, latents_prev, latents, zT,sT,sketch_latent,timestep, beta,eta,target_context,num_inference_steps,mask=None,save_output=False):
         """'
         Apply anti-gradient to the latents.(s2i)
         Args:
@@ -93,8 +97,9 @@ class AntiGradientPipeline(DiffusionInversion):
             latents = self.apply_anti_gradient(latent_model_input, latents, zT,sketch_image, t, 1.6)
         """
         outputs = self.predict_output(latents_prev, latents, zT, timestep, eta, num_inference_steps)
+        sketch_latent = torch.cat([sketch_latent] * 2) if sketch_latent.shape[0] != target_context.shape[0] else sketch_latent  # needed by pix2pix
         self.unet(sketch_latent,timestep,encoder_hidden_states=target_context)
-        sketch_outputs = self.predict_output(latents_prev, latents, sketch_latent, timestep, eta, num_inference_steps)
+        sketch_outputs = self.predict_output(latents_prev, latents, sT, timestep, eta, num_inference_steps,1)
         if save_output:
             self.save_output(outputs,"outputs",mask)
             self.save_output(sketch_outputs,"sketch_image",mask)

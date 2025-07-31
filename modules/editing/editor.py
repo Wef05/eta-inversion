@@ -91,9 +91,9 @@ class ControllerBasedEditor(Editor):
         else:
             inv_res = self.inverter.invert(image, prompt=source_prompt, context=src_context, inv_cfg=inv_cfg)  # , guidance_scale_fwd=1
         if sketch is not None:
-            sketch_inv_res_res =  self.inverter.invert(sketch, prompt=target_prompt, context=target_context, inv_cfg=inv_cfg)["zT_inv"]  # , guidance_scale_fwd=1
+            sketch_inv_res =  self.inverter.invert(sketch, prompt=target_prompt, context=target_context, inv_cfg=inv_cfg) # , guidance_scale_fwd=1
         else :
-            sketch_inv_res_res = None
+            sketch_inv_res = None
         print("inversion finished")
         # prepare controller
         controller = self.make_controller(image=image, source_prompt=source_prompt, target_prompt=target_prompt, inv_res=inv_res, **cfg, **kwargs)
@@ -102,7 +102,7 @@ class ControllerBasedEditor(Editor):
         # diffusion step is modified by the controller
         with self.inverter.use_controller(controller):
             if not self.no_source_backward:
-                edit_res = self.inverter.sample(inv_res,sketch_inv_res_res=sketch_inv_res_res,context=[src_context, target_context],s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
+                edit_res = self.inverter.sample(inv_res,sketch_inv_res=sketch_inv_res,context=[src_context, target_context],s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
                 
                 if edit_res is None:
                     return None

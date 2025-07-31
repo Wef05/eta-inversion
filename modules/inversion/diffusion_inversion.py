@@ -501,7 +501,7 @@ class DiffusionInversion:
         # for multiple prompts
         return torch.cat(latents)
 
-    def sample(self, inv_result: Dict[str, Any],sketch_inv_res_res=None,prompt: Optional[Union[str, List[str]]]=None,
+    def sample(self, inv_result: Dict[str, Any],sketch_inv_res=None,prompt: Optional[Union[str, List[str]]]=None,
                context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None,s2i_endT=None,s2i_beta=None,sigma=None) -> Dict[str, Any]:
         """Sample an image from the inversion result.
 

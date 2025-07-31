@@ -2,12 +2,12 @@ from utils.debug_utils import enable_deterministic
 enable_deterministic()
 
 import torch
-
+import numpy as np
 from PIL import Image
 from modules import load_inverter, load_editor
 from modules import load_diffusion_model
 from typing import Dict, Any, List
-
+from skeleton_preprocess import preprocess_skeleton
 from torchvision import transforms
 
 # 
@@ -192,6 +192,7 @@ class EditorManager:
             # sketch = transforms(gsimg).unsqueeze(0)
             # 反转sketch黑白
             sketch_image = 255 - sketch_image
+            sketch_image = preprocess_skeleton(sketch_image, thr=128)
             sketch = self.preproc(sketch_image)
         edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch,s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
 
