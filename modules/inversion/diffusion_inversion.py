@@ -423,7 +423,6 @@ class DiffusionInversion:
         for i, t in enumerate(self.pbar(self.get_timesteps_forward(), desc="forward")):
             # iterate over all timesteps and gradually invert latent
             latent, noise_pred = self.predict_step_forward(latent, t, context, guidance_scale_fwd)
-
             noise_preds.append(noise_pred)
             latents.append(latent)
 
@@ -502,8 +501,8 @@ class DiffusionInversion:
         # for multiple prompts
         return torch.cat(latents)
 
-    def sample(self, inv_result: Dict[str, Any], prompt: Optional[Union[str, List[str]]]=None, 
-               context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None,sketch = None,s2i_endT=None,s2i_beta=None,sigma=None) -> Dict[str, Any]:
+    def sample(self, inv_result: Dict[str, Any],sketch_inv_res_res=None,prompt: Optional[Union[str, List[str]]]=None,
+               context: Optional[Union[torch.Tensor, List[torch.Tensor]]]=None,s2i_endT=None,s2i_beta=None,sigma=None) -> Dict[str, Any]:
         """Sample an image from the inversion result.
 
         Args:
@@ -519,7 +518,6 @@ class DiffusionInversion:
             return None
 
         latent = inv_result["latents"][-1]
-
         # create context from prompt(s) if not provided
         context = context if context is not None else self.create_context(prompt)
 
@@ -530,7 +528,7 @@ class DiffusionInversion:
             latent = self.cat_latent([latent] * num_prompts)
 
         # denoise
-        z0 = self.diffusion_backward(latent, context, inv_result,sketch=sketch,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma)
+        z0 = self.diffusion_backward(latent, context, inv_result,sketch_inv_res=sketch_inv_res,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma)
 
         if z0 is None:
             return None
