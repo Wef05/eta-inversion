@@ -421,16 +421,6 @@ class EtaInversion(DiffusionInversion):
         best_idx = torch.argmin(losses).item()
         variance_noise = choices[best_idx][1]
         return {"eta": eta, "variance_noise": variance_noise}
-        # loss = losses[best_idx]
-        #
-        # # perform a scheduler backward step with selected eta and variance noise
-        # latent_prev_rec = self.step_backward(
-        #     noise_pred, t, latent, eta=eta, variance_noise=variance_noise).prev_sample
-        #
-        # # difference from forward to backward
-        # delta = latent_prev - latent_prev_rec
-
-        #return {"eta": eta, "variance_noise": variance_noise, "delta": delta, "latent_prev": latent_prev, "latent_prev_rec": latent_prev_rec, "loss": loss}
 
     def overlay_attn_on_image(self, vae, device, orig_image, attn_latent, alpha=0.5):
         """
