@@ -139,7 +139,10 @@ class EditorManager:
         Returns:
             Dict[str, Any]: Image editing result.
         """
-
+        import psutil, os, time
+        pid = os.getpid()
+        p = psutil.Process(pid)
+        print(f"Memory: {p.memory_info().rss / 1024 ** 2:.2f} MB")
         # convert flat to nested dict
         cfg = to_nested_dict(cfg)
 
