@@ -146,7 +146,9 @@ class EtaInversion(DiffusionInversion):
 
         self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
         #实例化controlnet
-        controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-canny", torch_dtype=torch.float32).to(self.model.device)
+        #controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-canny", torch_dtype=torch.float32).to(self.model.device)
+        controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-scribble",
+                                                           torch_dtype=torch.float32).to(self.model.device)
         self.controlnet = ControlNetPaperer(controlnet_model,self.scheduler_bwd.timesteps)
         if eta_start is not None:
             # for gradio
