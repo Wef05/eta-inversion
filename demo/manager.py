@@ -200,7 +200,8 @@ class EditorManager:
             sketch_image = np.concatenate([sketch_image, sketch_image, sketch_image], axis=2)
             canny_image = Image.fromarray(sketch_image)
             canny_image.save("canny_output.png")
-            sketch = self.preproc(sketch_image)
+            # sketch = self.preproc(sketch_image)
+            # sketch = (sketch + 1) / 2.0
         edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch,s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
 
         img_edit = self.postproc(edit_res["image"])
