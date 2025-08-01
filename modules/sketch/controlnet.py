@@ -43,7 +43,9 @@ class ControlNetPaperer(DiffusionPipeline):
     ):
         controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
         if self.do_classifier_free_guidance and not self.guess_mode:
-            self.image = torch.cat([self.image] * 2)
+            image = torch.cat([self.image] * 2)
+        else:
+            image = self.image
         # 创建局部变量而不是修改类属性
         control_guidance_start = self.control_guidance_start
         control_guidance_end = self.control_guidance_end
@@ -91,7 +93,7 @@ class ControlNetPaperer(DiffusionPipeline):
             control_model_input,
             t,
             encoder_hidden_states=controlnet_prompt_embeds,
-            controlnet_cond=self.image,
+            controlnet_cond=image,
             conditioning_scale=cond_scale,
             guess_mode=self.guess_mode,
             return_dict=False,
