@@ -356,7 +356,7 @@ class EtaInversion(DiffusionInversion):
             print(f"当前时间步: {t}")
             enable_grad = False
             if t >= s2i_endT and sketch is not None:
-                enable_grad = True
+                #enable_grad = True
                 latent = latent.requires_grad_(True)  # 保留latent梯度
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
@@ -395,6 +395,16 @@ class EtaInversion(DiffusionInversion):
         # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
 
+        controlnet_res = {
+            "down_block_additional_residuals": None,
+            "mid_block_additional_residual": None
+        }
+        if controlnet is not None:
+            controlnet_res = controlnet(latent[1], latent_input[[1,3]], t, i)
+        t_noise_pred_uncond, t_noise_prediction_text = self.unet(latent_input[[1,3]], t, encoder_hidden_states=context[[1,3]],down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
+        s_noise_pred_uncond, s_noise_prediction_text = self.unet(latent_input[[0,2]], t, encoder_hidden_states=context[[0,2]], **kwargs)["sample"].chunk(2)
+        noise_pred_uncond = torch.cat([t_noise_pred_uncond, s_noise_pred_uncond], dim=0)  # [2,4,64,64]
+        noise_prediction_text = torch.cat([t_noise_prediction_text, s_noise_prediction_text], dim=0)  # [2,4,64,64]
         if is_fwd:
             guidance_scale = self.guidance_scale_fwd
         if isinstance(guidance_scale, (tuple, list, dict, np.ndarray)):
