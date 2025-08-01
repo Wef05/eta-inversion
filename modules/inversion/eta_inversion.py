@@ -147,7 +147,7 @@ class EtaInversion(DiffusionInversion):
         self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
         #实例化controlnet
         controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-canny", torch_dtype=torch.float16)
-        self.controlnet = ControlNetPaperer(controlnet_model,self.scheduler_bwd.timesteps)
+        self.controlnet = ControlNetPaperer(controlnet_model,self.scheduler_bwd.timesteps).to(self.model.device)
         if eta_start is not None:
             # for gradio
             assert eta_end is not None
@@ -404,7 +404,7 @@ class EtaInversion(DiffusionInversion):
                 "mid_block_additional_residual": None
             }
             if controlnet is not None:
-                controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t, i)
+                controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
             t_noise_pred_uncond, t_noise_prediction_text = self.unet(latent_input[[1,3]], t, encoder_hidden_states=context[[1,3]],down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
             s_noise_pred_uncond, s_noise_prediction_text = self.unet(latent_input[[0,2]], t, encoder_hidden_states=context[[0,2]], **kwargs)["sample"].chunk(2)
             noise_pred_uncond = torch.cat([t_noise_pred_uncond, s_noise_pred_uncond], dim=0)  # [2,4,64,64]
