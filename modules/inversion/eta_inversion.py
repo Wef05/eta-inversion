@@ -2,6 +2,7 @@ import time
 from sympy.solvers.solveset import invert_real
 from tqdm import tqdm
 
+from diffusers.models import ControlNetModel
 from modules.editing.ptp_editor import PromptToPromptControllerAttentionStore
 from utils.utils import log_delta
 from .diffusion_inversion import DiffusionInversion
@@ -18,6 +19,7 @@ import torchvision
 
 from modules.sketch.AntiGradient import AntiGradientPipeline
 
+from modules.sketch.controlnet import ControlNetPaperer
 import os
 import matplotlib.pyplot as plt
 import re
@@ -143,6 +145,9 @@ class EtaInversion(DiffusionInversion):
         #实例anti_gradient
 
         self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
+        #实例化controlnet
+        controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-canny", torch_dtype=torch.float16)
+        self.controlnet = ControlNetPaperer(controlnet_model,self.scheduler_bwd.timesteps)
         if eta_start is not None:
             # for gradio
             assert eta_end is not None
@@ -281,7 +286,7 @@ class EtaInversion(DiffusionInversion):
         # make a noise prediction using UNet
         ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
-            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,inv_result=inv_result,i=i)
+            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,i=i,controlnet=self.controlnet)
         # get best eta and variance noise
         eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
         variance_noise = eta_res["variance_noise"]
@@ -338,8 +343,12 @@ class EtaInversion(DiffusionInversion):
         if mask is not None:
             mask = F.interpolate(mask[None, None], (64, 64), mode="bilinear")[0].to(latent.dtype).to(self.model.device)
 
-        #setup AntiGradient
-        self.anti_gradient.setup()
+
+        if sketch is not None:
+            # setup AntiGradient
+            self.anti_gradient.setup()
+            #setup controlnet
+            self.controlnet.setup(sketch,context[[1,3]])
         zT = inv_result["zT_inv"].clone() if inv_result["zT_inv"] is not None else None
         print(f"总时间步数: {len(self.scheduler_bwd.timesteps)}")
         latent = latent.requires_grad_(True)  # 保留latent梯度
@@ -381,11 +390,10 @@ class EtaInversion(DiffusionInversion):
 
         return noise_opt
 
-    def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False,inv_result=None,i=None,**kwargs) -> torch.Tensor:
+    def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False,i=None,controlnet=None, **kwargs) -> torch.Tensor:
         # context      ： su       tu       sc       tc
         # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
-        noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
 
         if is_fwd:
             guidance_scale = self.guidance_scale_fwd
