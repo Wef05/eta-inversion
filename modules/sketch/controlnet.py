@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple, Union
 from diffusers import DiffusionPipeline
-from diffusers.models import ControlNetModel,MultiControlNetModel
+from diffusers.models import ControlNetModel
+from diffusers.pipelines.controlnet.multicontrolnet import MultiControlNetModel
 from diffusers.utils.torch_utils import is_compiled_module
 from diffusers.image_processor import PipelineImageInput
 import torch
