@@ -286,7 +286,7 @@ class EtaInversion(DiffusionInversion):
         # make a noise prediction using UNet
         ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
-            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,i=i,controlnet=self.controlnet)
+            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,i=i,controlnet=self.controlnet if sketch is not None else None)
         # get best eta and variance noise
         eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
         variance_noise = eta_res["variance_noise"]
@@ -363,7 +363,8 @@ class EtaInversion(DiffusionInversion):
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=zT,enable_grad=enable_grad,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma,inv_result=inv_result,i=i)
             latent = latent.detach()#断开
             del noise_pred
-            self.anti_gradient.clear()
+            if enable_grad:
+                self.anti_gradient.clear()
             torch.cuda.empty_cache()  # 可选：清理已释放但仍保留的碎片
         return latent
 
