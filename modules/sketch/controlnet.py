@@ -27,7 +27,7 @@ class ControlNetPaperer(DiffusionPipeline):
         self.controlnet_guidance_start = control_guidance_start
         self.controlnet_guidance_end = control_guidance_end
 
-    def set_up(
+    def setup(
             self,
             image: PipelineImageInput,
             prompt_embeds: Optional[torch.Tensor],
