@@ -76,7 +76,7 @@ class TestInv(unittest.TestCase):
         cls.save_image_path = Path("result/test")
         cls.device = "cuda"
 
-        cls.model = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4").to(cls.device)
+        cls.model = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5").to(cls.device)
         cls.preproc = StablePreprocess(cls.device, size=512, **{"center_crop": True, "return_np": False})
         cls.postproc = StablePostProc()
 

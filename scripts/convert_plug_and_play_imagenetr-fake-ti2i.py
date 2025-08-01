@@ -38,7 +38,7 @@ def main():
         if not img_file.is_file():
             if model is None:
                 scheduler = DDIMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", clip_sample=False, set_alpha_to_one=False)
-                model = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", scheduler=scheduler).to(device)
+                model = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5", scheduler=scheduler).to(device)
 
             latents = torch.randn([1, 4, 64, 64], generator=torch.Generator(device).manual_seed(seed), device=device)
             latents_all[source_prompt] = latents.cpu().numpy()

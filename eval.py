@@ -70,7 +70,7 @@ def run_eval(path: str, data: str, model: Dict[str, Any], method: Dict[str, Any]
             continue
         elif ldm_stable is None:
             # load diffusion model
-            # ldm_stable = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4").to(device)
+            # ldm_stable = StableDiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5").to(device)
             # preproc = StablePreprocess(device, size=512, center_crop=True, return_np=False, pil_resize=True)
             # postproc = StablePostProc()
             model = {**model}

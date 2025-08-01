@@ -21,7 +21,7 @@ class Demo:
         
         # dropdown options [value, label]
         self.models = dict([
-            ("CompVis/stable-diffusion-v1-4", "CompVis/stable-diffusion-v1-4"),
+            ("runwayml/stable-diffusion-v1-5", "runwayml/stable-diffusion-v1-5"),
         ])
 
         self.inverters = dict([
@@ -49,7 +49,7 @@ class Demo:
         ])
 
         self.default_values = {
-            "model": "CompVis/stable-diffusion-v1-4",
+            "model": "runwayml/stable-diffusion-v1-5",
             "inverter": "etainv",
             "editor": "ptp",
         }
@@ -82,7 +82,7 @@ class Demo:
         if model is None:
             return []
     
-        if model in ("CompVis/stable-diffusion-v1-4", ):
+        if model in ("runwayml/stable-diffusion-v1-5", ):
             # only sd1.4 supported for now
             out = ["diffinv", "nti", "npi", "proxnpi", "edict", "ddpminv", "dirinv", "etainv"]
         else:
