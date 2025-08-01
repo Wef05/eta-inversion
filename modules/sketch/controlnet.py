@@ -41,9 +41,10 @@ class ControlNetPaperer(DiffusionPipeline):
             t,
             i
     ):
+
         controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
         if isinstance(controlnet, MultiControlNetModel) and isinstance(self.controlnet_conditioning_scale, float):
-            controlnet_conditioning_scale = [self.controlnet_conditioning_scale] * len(controlnet.nets)
+            self.controlnet_conditioning_scale = [self.controlnet_conditioning_scale] * len(controlnet.nets)
 
         controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
         controlnet_keep = []
