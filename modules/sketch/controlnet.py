@@ -45,8 +45,17 @@ class ControlNetPaperer(DiffusionPipeline):
         controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
         if isinstance(controlnet, MultiControlNetModel) and isinstance(self.controlnet_conditioning_scale, float):
             self.controlnet_conditioning_scale = [self.controlnet_conditioning_scale] * len(controlnet.nets)
-
-        controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
+        # align format for control guidance
+        if not isinstance(self.control_guidance_start, list) and isinstance(self.control_guidance_end, list):
+            self.control_guidance_start = len(self.control_guidance_end) * [self.control_guidance_start]
+        elif not isinstance(self.control_guidance_end, list) and isinstance(self.control_guidance_start, list):
+            self.control_guidance_end = len(self.control_guidance_start) * [self.control_guidance_end]
+        elif not isinstance(self.control_guidance_start, list) and not isinstance(self.control_guidance_end, list):
+            mult = len(controlnet.nets) if isinstance(controlnet, MultiControlNetModel) else 1
+            self.control_guidance_start, self.control_guidance_end = (
+                mult * [self.control_guidance_start],
+                mult * [self.control_guidance_end],
+            )
         controlnet_keep = []
         for index in range(len(self.timesteps)):
             keeps = [
