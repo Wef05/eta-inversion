@@ -408,7 +408,7 @@ class EtaInversion(DiffusionInversion):
             t_noise_pred_uncond, t_noise_prediction_text = self.unet(latent_input[[1,3]], t, encoder_hidden_states=context[[1,3]],down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
             s_noise_pred_uncond, s_noise_prediction_text = self.unet(latent_input[[0,2]], t, encoder_hidden_states=context[[0,2]], **kwargs)["sample"].chunk(2)
             noise_pred_uncond = torch.cat([s_noise_pred_uncond, t_noise_pred_uncond], dim=0)  # [2,4,64,64]
-            noise_prediction_text = torch.cat([t_noise_prediction_text, s_noise_prediction_text], dim=0)  # [2,4,64,64]
+            noise_prediction_text = torch.cat([s_noise_prediction_text, t_noise_prediction_text], dim=0)  # [2,4,64,64]
 
         if isinstance(guidance_scale, (tuple, list, dict, np.ndarray)):
             guidance_scale = guidance_scale[t.item()]  # get per timestep scale
