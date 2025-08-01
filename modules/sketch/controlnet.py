@@ -24,8 +24,8 @@ class ControlNetPaperer(DiffusionPipeline):
         self.timesteps = timesteps
         self.guess_mode = guess_mode
         self.controlnet_conditioning_scale = controlnet_conditioning_scale
-        self.controlnet_guidance_start = control_guidance_start
-        self.controlnet_guidance_end = control_guidance_end
+        self.control_guidance_start = control_guidance_start
+        self.control_guidance_end = control_guidance_end
 
     def setup(
             self,
