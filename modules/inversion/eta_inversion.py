@@ -284,7 +284,7 @@ class EtaInversion(DiffusionInversion):
         guidance_scale_bwd = guidance_scale_bwd or self.guidance_scale_bwd
 
         # call controller callback (e.g. ptp)
-        #latent = self.controller.begin_step(latent=latent, t=t)
+        latent = self.controller.begin_step(latent=latent, t=t)
         # make a noise prediction using UNet
         ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
@@ -310,24 +310,12 @@ class EtaInversion(DiffusionInversion):
             if enable_grad:
                 with ctx:
                         anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,s2i_beta,eta,self.num_inference_steps,mix_mask,t == s2i_endT)
-                        #new_latent[1:2] = anti_latent[1:2]
-                        #new_latent = anti_latent
-        #new_latent[:1] = eta_res["latent_prev"][:1]
-        #delta = eta_res["latent_prev"][:1] - new_latent[:1]
-        # if self.mask_mode_cfg["target_dirinv"] is not None and self.mask_mode_cfg is not None:
-        #     print("mask_dirinv!")
-        #     if mask_dirinv is not None:
-        #         delta = (1 - mask_dirinv) * delta
-        #     new_latent[1:] = new_latent[1:] + self.mask_mode_cfg["target_dirinv"] * delta
-        # update the latent based on the predicted noise with the noise schedulers
-        # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
+                        new_latent[1:2] = anti_latent[1:2]
 
-        # direct inversion
-        # new_latent[:1] += eta_res["delta"]
         new_latent = new_latent.clone()
 
         # call controller callback to modify latent (e.g. ptp)
-        #new_latent = self.controller.end_step(latent=new_latent, noise_pred=noise_pred, t=t)
+        new_latent = self.controller.end_step(latent=new_latent, noise_pred=noise_pred, t=t)
 
         return new_latent, noise_pred
 
