@@ -396,9 +396,9 @@ class EtaInversion(DiffusionInversion):
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             print(f"当前时间步: {t}")
             enable_grad = False
-            if t >= s2i_endT and sketch is not None:
-                #enable_grad = True
-                latent = latent.requires_grad_(True)  # 保留latent梯度
+            # if t >= s2i_endT and sketch is not None:
+            #     #enable_grad = True
+            #     latent = latent.requires_grad_(True)  # 保留latent梯度
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=zT,enable_grad=enable_grad,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma,inv_result=inv_result,i=i)
