@@ -373,11 +373,13 @@ class PtPUnetForward:
         self.source_latents = source_latents
         self.idx = 0
 
-    def __call__(self, sample: torch.Tensor, timestep: torch.Tensor, encoder_hidden_states: torch.Tensor) -> UNet2DConditionOutput:
+    def __call__(self, sample: torch.Tensor, timestep: torch.Tensor, encoder_hidden_states: torch.Tensor,
+                down_block_additional_residuals: Optional[Tuple[torch.Tensor]] = None,
+                mid_block_additional_residual: Optional[torch.Tensor] = None) -> UNet2DConditionOutput:
         if self.source_latents is not None:
             assert sample.shape[0] == 4
             # use stored latents from forward and patch in
             sample[0::2] = self.source_latents[-(self.idx + 1)]
             self.idx += 1
 
-        return self.unet_forward(sample, timestep, encoder_hidden_states=encoder_hidden_states)
+        return self.unet_forward(sample, timestep, encoder_hidden_states=encoder_hidden_states,down_block_additional_residuals=down_block_additional_residuals,mid_block_additional_residual=mid_block_additional_residual)
