@@ -130,6 +130,7 @@ class AttentionControl(abc.ABC):
 class SpatialReplace(EmptyControl):
     
     def step_callback(self, x_t):
+        print("info - step_callback")
         if self.cur_step < self.stop_inject:
             b = x_t.shape[0]
             x_t = x_t[:1].expand(b, *x_t.shape[1:])
@@ -167,6 +168,7 @@ class AttentionStore(AttentionControl):
         self.step_store = self.get_empty_store()
 
     def get_average_attention(self):
+        print("info - average attention store")
         average_attention = {key: [item / self.cur_step for item in self.attention_store[key]] for key in self.attention_store}
         return average_attention
 
@@ -202,7 +204,20 @@ class AttentionControlEdit(AttentionStore, abc.ABC):
     def replace_cross_attention(self, attn_base, att_replace):
         raise NotImplementedError
     
-
+    def forward(self, attn: torch.Tensor, is_cross: bool, place_in_unet: str) -> torch.Tensor:
+        super(AttentionControlEdit, self).forward(attn, is_cross, place_in_unet)
+        if is_cross or (self.num_self_replace[0] <= self.cur_step  < self.num_self_replace[1]):
+            h = attn.shape[0] // (self.batch_size)
+            attn = attn.reshape(self.batch_size, h, *attn.shape[1:])
+            attn_base, attn_repalce = attn[0], attn[1:]
+            if is_cross:
+                alpha_words = self.cross_replace_alpha[self.cur_step]
+                attn_repalce_new = self.replace_cross_attention(attn_base, attn_repalce) * alpha_words + (1 - alpha_words) * attn_repalce
+                attn[1:] = attn_repalce_new
+            else:
+                attn[1:] = self.replace_self_attention(attn_base, attn_repalce, place_in_unet)
+            attn = attn.reshape(self.batch_size * h, *attn.shape[2:])
+        return attn
     
     def __init__(self, model: StableDiffusionPipeline, prompts: List[str], num_steps: int,
                  cross_replace_steps: Union[float, Tuple[float, float], Dict[str, Tuple[float, float]]],
