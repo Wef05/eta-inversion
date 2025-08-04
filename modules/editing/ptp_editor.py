@@ -91,7 +91,7 @@ class PromptToPromptControllerBase(ControllerBase):
 
     def end_step(self, latent: torch.Tensor, noise_pred: Optional[torch.Tensor]=None, t: Optional[int]=None) -> torch.Tensor:
         # update latent using ptp attention controller
-        latent = self.controller.step_callback(latent)
+        #latent = self.controller.step_callback(latent)
         # unregister ptp at the begging of each diffusion step
         ptp_utils.register_attention_control(self.model, None)
         self.step_idx += 1

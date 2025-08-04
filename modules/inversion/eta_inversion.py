@@ -50,6 +50,57 @@ def to_4ch(attn_map):
     if attn_map.shape[1] == 1:  # 若通道=1，则复制到4通道
         attn_map = attn_map.repeat(1, 4, 1, 1)  # -> [1,4,H,W]
     return attn_map
+# expand_residuals_with_zeros.py
+import torch
+from typing import List, Dict
+
+def expand_tensor_with_zeros(t: torch.Tensor) -> torch.Tensor:
+    """
+    简短描述：
+        将形状 [2, …] 的张量扩展为 [4, …]，并按 [0, t[0], 0, t[1]] 填充。
+    Input:
+        t (torch.Tensor) : 原始张量，首维大小必须为 2
+    Output:
+        torch.Tensor     : 扩展后张量，首维大小为 4
+    Method：
+        1. 创建同 dtype/device、形状为 [4, …] 的全零张量；
+        2. 把 t[0] 复制到新张量的索引 1，把 t[1] 复制到索引 3。
+    """
+    if t.shape[0] != 2:
+        raise ValueError("张量首维必须为 2 才能扩展到 4")
+    # 步骤 1：创建全零张量
+    out = torch.zeros(
+        (4, *t.shape[1:]), dtype=t.dtype, device=t.device, requires_grad=t.requires_grad
+    )
+    # 步骤 2：写入原始帧
+    out[1] = t[0]
+    out[3] = t[1]
+    return out
+
+
+def expand_controlnet_res_with_zeros(
+    controlnet_res: Dict[str, object]
+) -> Dict[str, object]:
+    """
+    简短描述：
+        批量把 controlnet_res 内 residual 张量按零填充方式扩展到首维 4。
+    Input:
+        controlnet_res (dict):
+            - "down_block_additional_residuals": List[Tensor]，每个形状 [2, …]
+            - "mid_block_additional_residual" : Tensor，形状 [2, …]
+    Output:
+        Dict[str, object] : 同名键，张量首维均为 4，格式不变
+    Method:
+        1. 遍历 down residual 列表，调用 expand_tensor_with_zeros；
+        2. 对 mid residual 执行同样操作。
+    """
+    controlnet_res["down_block_additional_residuals"] = [
+        expand_tensor_with_zeros(r) for r in controlnet_res["down_block_additional_residuals"]
+    ]
+    controlnet_res["mid_block_additional_residual"] = expand_tensor_with_zeros(
+        controlnet_res["mid_block_additional_residual"]
+    )
+    return controlnet_res
 
 class EtaTensor(torch.Tensor):
     # Hack to avoid exception in DDIM scheduler in eta > 0 condition
@@ -392,12 +443,10 @@ class EtaInversion(DiffusionInversion):
             #warning!!!!简单实现，鲁棒性差！！
             if controlnet is not None:
                 controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
-                t_noise_pred_uncond, t_noise_prediction_text = self.unet(latent_input[[1,3]], t, encoder_hidden_states=context[[1,3]],down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
-            else :
-                t_noise_pred_uncond, t_noise_prediction_text = self.unet(latent_input[[1, 3]], t, encoder_hidden_states=context[[1, 3]], **kwargs)["sample"].chunk(2)
-            s_noise_pred_uncond, s_noise_prediction_text = self.unet(latent_input[[0,2]], t, encoder_hidden_states=context[[0,2]], **kwargs)["sample"].chunk(2)
-            noise_pred_uncond = torch.cat([s_noise_pred_uncond, t_noise_pred_uncond], dim=0)  # [2,4,64,64]
-            noise_prediction_text = torch.cat([s_noise_prediction_text, t_noise_prediction_text], dim=0)  # [2,4,64,64]
+                controlnet_res = expand_controlnet_res_with_zeros(controlnet_res)
+                noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context,down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
+            else:
+                noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
         if isinstance(guidance_scale, (tuple, list, dict, np.ndarray)):
             guidance_scale = guidance_scale[t.item()]  # get per timestep scale
         return noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)
