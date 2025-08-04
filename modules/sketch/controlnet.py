@@ -12,7 +12,7 @@ class ControlNetPaperer(DiffusionPipeline):
             timesteps: List[int],
             do_classifier_free_guidance: bool = True,
             guess_mode: bool = False,
-            controlnet_conditioning_scale: Union[float, List[float]] = 1.0,
+            controlnet_conditioning_scale: Union[float, List[float]] = 0.8,
             control_guidance_start: Union[float, List[float]] = 0.0,
             control_guidance_end: Union[float, List[float]] = 1.0,
                  ):
