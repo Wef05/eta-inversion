@@ -214,7 +214,7 @@ class AttentionControlEdit(AttentionStore, abc.ABC):
                 alpha_words = self.cross_replace_alpha[self.cur_step]
                 attn_repalce_new = self.replace_cross_attention(attn_base, attn_repalce) * alpha_words + (1 - alpha_words) * attn_repalce
                 attn[1:] = attn_repalce_new
-            else:
+            elif self.num_self_replace[1] >= 0.0 :
                 attn[1:] = self.replace_self_attention(attn_base, attn_repalce, place_in_unet)
             attn = attn.reshape(self.batch_size * h, *attn.shape[2:])
         return attn
