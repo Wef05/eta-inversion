@@ -2,6 +2,7 @@ import time
 from sympy.solvers.solveset import invert_real
 from tqdm import tqdm
 
+from diffusers.models import ControlNetModel
 from modules.editing.ptp_editor import PromptToPromptControllerAttentionStore
 from utils.utils import log_delta
 from .diffusion_inversion import DiffusionInversion
@@ -18,6 +19,7 @@ import torchvision
 
 from modules.sketch.AntiGradient import AntiGradientPipeline
 
+from modules.sketch.controlnet import ControlNetPaperer
 import os
 import matplotlib.pyplot as plt
 import re
@@ -48,6 +50,57 @@ def to_4ch(attn_map):
     if attn_map.shape[1] == 1:  # 若通道=1，则复制到4通道
         attn_map = attn_map.repeat(1, 4, 1, 1)  # -> [1,4,H,W]
     return attn_map
+# expand_residuals_with_zeros.py
+import torch
+from typing import List, Dict
+
+def expand_tensor_with_zeros(t: torch.Tensor) -> torch.Tensor:
+    """
+    简短描述：
+        将形状 [2, …] 的张量扩展为 [4, …]，并按 [0, t[0], 0, t[1]] 填充。
+    Input:
+        t (torch.Tensor) : 原始张量，首维大小必须为 2
+    Output:
+        torch.Tensor     : 扩展后张量，首维大小为 4
+    Method：
+        1. 创建同 dtype/device、形状为 [4, …] 的全零张量；
+        2. 把 t[0] 复制到新张量的索引 1，把 t[1] 复制到索引 3。
+    """
+    if t.shape[0] != 2:
+        raise ValueError("张量首维必须为 2 才能扩展到 4")
+    # 步骤 1：创建全零张量
+    out = torch.zeros(
+        (4, *t.shape[1:]), dtype=t.dtype, device=t.device, requires_grad=t.requires_grad
+    )
+    # 步骤 2：写入原始帧
+    out[1] = t[0]
+    out[3] = t[1]
+    return out
+
+
+def expand_controlnet_res_with_zeros(
+    controlnet_res: Dict[str, object]
+) -> Dict[str, object]:
+    """
+    简短描述：
+        批量把 controlnet_res 内 residual 张量按零填充方式扩展到首维 4。
+    Input:
+        controlnet_res (dict):
+            - "down_block_additional_residuals": List[Tensor]，每个形状 [2, …]
+            - "mid_block_additional_residual" : Tensor，形状 [2, …]
+    Output:
+        Dict[str, object] : 同名键，张量首维均为 4，格式不变
+    Method:
+        1. 遍历 down residual 列表，调用 expand_tensor_with_zeros；
+        2. 对 mid residual 执行同样操作。
+    """
+    controlnet_res["down_block_additional_residuals"] = [
+        expand_tensor_with_zeros(r) for r in controlnet_res["down_block_additional_residuals"]
+    ]
+    controlnet_res["mid_block_additional_residual"] = expand_tensor_with_zeros(
+        controlnet_res["mid_block_additional_residual"]
+    )
+    return controlnet_res
 
 class EtaTensor(torch.Tensor):
     # Hack to avoid exception in DDIM scheduler in eta > 0 condition
@@ -143,6 +196,11 @@ class EtaInversion(DiffusionInversion):
         #实例anti_gradient
 
         self.anti_gradient = AntiGradientPipeline(self.model,self.scheduler_bwd)
+        #实例化controlnet
+        #controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-canny", torch_dtype=torch.float32).to(self.model.device)
+        controlnet_model = ControlNetModel.from_pretrained("lllyasviel/sd-controlnet-scribble",
+                                                           torch_dtype=torch.float32).to(self.model.device)
+        self.controlnet = ControlNetPaperer(controlnet_model,self.scheduler_bwd.timesteps)
         if eta_start is not None:
             # for gradio
             assert eta_end is not None
@@ -281,7 +339,7 @@ class EtaInversion(DiffusionInversion):
         # make a noise prediction using UNet
         ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
-            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,inv_result=inv_result,i=i)
+            noise_pred = self.predict_noise(latent, t, context, guidance_scale_bwd,i=i,controlnet=self.controlnet if sketch is not None else None)
         # get best eta and variance noise
         eta_res = self.get_eta_variance_noise(source_latent_prev, latent[:1], t, noise_pred[:1], forward_noise,generator)
         variance_noise = eta_res["variance_noise"]
@@ -303,20 +361,8 @@ class EtaInversion(DiffusionInversion):
             if enable_grad:
                 with ctx:
                         anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,s2i_beta,eta,self.num_inference_steps,mix_mask,t == s2i_endT)
-                        #new_latent[1:2] = anti_latent[1:2]
-                        #new_latent = anti_latent
-        #new_latent[:1] = eta_res["latent_prev"][:1]
-        #delta = eta_res["latent_prev"][:1] - new_latent[:1]
-        # if self.mask_mode_cfg["target_dirinv"] is not None and self.mask_mode_cfg is not None:
-        #     print("mask_dirinv!")
-        #     if mask_dirinv is not None:
-        #         delta = (1 - mask_dirinv) * delta
-        #     new_latent[1:] = new_latent[1:] + self.mask_mode_cfg["target_dirinv"] * delta
-        # update the latent based on the predicted noise with the noise schedulers
-        # new_latent = self.step_backward(noise_pred, t, latent, eta=eta_res["eta"], variance_noise=eta_res["variance_noise"]).prev_sample
+                        new_latent[1:2] = anti_latent[1:2]
 
-        # direct inversion
-        # new_latent[:1] += eta_res["delta"]
         new_latent = new_latent.clone()
 
         # call controller callback to modify latent (e.g. ptp)
@@ -338,23 +384,28 @@ class EtaInversion(DiffusionInversion):
         if mask is not None:
             mask = F.interpolate(mask[None, None], (64, 64), mode="bilinear")[0].to(latent.dtype).to(self.model.device)
 
-        #setup AntiGradient
-        self.anti_gradient.setup()
+
+        if sketch is not None:
+            # setup AntiGradient
+            self.anti_gradient.setup()
+            #setup controlnet
+            self.controlnet.setup(sketch,context[[1,3]])
         zT = inv_result["zT_inv"].clone() if inv_result["zT_inv"] is not None else None
         print(f"总时间步数: {len(self.scheduler_bwd.timesteps)}")
         latent = latent.requires_grad_(True)  # 保留latent梯度
         for i, t in enumerate(self.pbar(self.scheduler_bwd.timesteps, desc="backward")):
             print(f"当前时间步: {t}")
             enable_grad = False
-            if t >= s2i_endT and sketch is not None:
-                enable_grad = True
-                latent = latent.requires_grad_(True)  # 保留latent梯度
+            # if t >= s2i_endT and sketch is not None:
+            #     #enable_grad = True
+            #     latent = latent.requires_grad_(True)  # 保留latent梯度
             # pass noise loss
             latent, noise_pred = self.predict_step_backward(latent, t, context, source_latent_prev=inv_result["latents"][-(i+2)], forward_noise=inv_result["noise_preds"][-(i+1)],
                                                             generator=generator, mask=mask, edit_word_idx=edit_word_idx,sketch=sketch,zT=zT,enable_grad=enable_grad,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma,inv_result=inv_result,i=i)
             latent = latent.detach()#断开
             del noise_pred
-            self.anti_gradient.clear()
+            if enable_grad:
+                self.anti_gradient.clear()
             torch.cuda.empty_cache()  # 可选：清理已释放但仍保留的碎片
         return latent
 
@@ -381,14 +432,21 @@ class EtaInversion(DiffusionInversion):
 
         return noise_opt
 
-    def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False,inv_result=None,i=None,**kwargs) -> torch.Tensor:
+    def predict_noise(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale: Optional[Union[float, int]], is_fwd: bool=False,i=None,controlnet=None, **kwargs) -> torch.Tensor:
         # context      ： su       tu       sc       tc
         # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
-        noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
-
         if is_fwd:
             guidance_scale = self.guidance_scale_fwd
+            noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
+        else:
+            #warning!!!!简单实现，鲁棒性差！！
+            if controlnet is not None:
+                controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
+                controlnet_res = expand_controlnet_res_with_zeros(controlnet_res)
+                noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context,down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
+            else:
+                noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
         if isinstance(guidance_scale, (tuple, list, dict, np.ndarray)):
             guidance_scale = guidance_scale[t.item()]  # get per timestep scale
         return noise_pred_uncond + guidance_scale * (noise_prediction_text - noise_pred_uncond)

@@ -21,7 +21,7 @@ class Demo:
         
         # dropdown options [value, label]
         self.models = dict([
-            ("CompVis/stable-diffusion-v1-4", "CompVis/stable-diffusion-v1-4"),
+            ("runwayml/stable-diffusion-v1-5", "runwayml/stable-diffusion-v1-5"),
         ])
 
         self.inverters = dict([
@@ -49,7 +49,7 @@ class Demo:
         ])
 
         self.default_values = {
-            "model": "CompVis/stable-diffusion-v1-4",
+            "model": "runwayml/stable-diffusion-v1-5",
             "inverter": "etainv",
             "editor": "ptp",
         }
@@ -82,7 +82,7 @@ class Demo:
         if model is None:
             return []
     
-        if model in ("CompVis/stable-diffusion-v1-4", ):
+        if model in ("runwayml/stable-diffusion-v1-5", ):
             # only sd1.4 supported for now
             out = ["diffinv", "nti", "npi", "proxnpi", "edict", "ddpminv", "dirinv", "etainv"]
         else:
@@ -318,8 +318,8 @@ class Demo:
             
             # source and target prompt are common for all editors
             with gr.Row():
-                self.inputs["editor.source_prompt"] = gr.Textbox(label="Source prompt", value="a house in the woods")
-                self.inputs["editor.target_prompt"] = gr.Textbox(label="Target prompt", value="a monster in the woods")
+                self.inputs["editor.source_prompt"] = gr.Textbox(label="Source prompt", value="three pots of flowers on windowsill")
+                self.inputs["editor.target_prompt"] = gr.Textbox(label="Target prompt", value="three pots of cactus on windowsill")
 
             # build (hidden) menu for each editor
             for editor in self.editors:
@@ -343,21 +343,21 @@ class Demo:
                             )
 
                             self.inputs[f"{k}.dft_cfg.self_replace_steps"] = gr.Number(
-                                label="Self replace steps", value=0.6, minimum=0, maximum=1, step=0.1,
+                                label="Self replace steps", value=0.6, minimum=-1, maximum=1, step=0.1,
                             )
 
                         with gr.Row():
                             self.inputs[f"{k}.dft_cfg.source_blend_word"] = gr.Textbox(
-                                label="Source blend word", value="house",
+                                label="Source blend word", value="flowers",
                             )
 
                             self.inputs[f"{k}.dft_cfg.target_blend_word"] = gr.Textbox(
-                                label="Target blend word", value="monster",
+                                label="Target blend word", value="cactus",
                             )
 
                         with gr.Row():
                             self.inputs[f"{k}.dft_cfg.eq_params_words"] = gr.Textbox(
-                                label="Amplify word", value="monster",
+                                label="Amplify word", value="cactus",
                             )
 
                             self.inputs[f"{k}.dft_cfg.eq_params_values"] = gr.Number(

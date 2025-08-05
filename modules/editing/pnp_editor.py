@@ -41,7 +41,7 @@ class PlugAndPlayEditor(Editor):
         yield
         unregister_pnp(self.model)
 
-    def edit(self, image: Tensor, source_prompt: str, target_prompt: str, cfg: Optional[Dict[str, Any]]=None, inv_cfg=None,) -> Dict[str, Any]:
+    def edit(self, image: Tensor, source_prompt: str, target_prompt: str, cfg: Optional[Dict[str, Any]]=None, inv_cfg=None,sketch=None,s2i_endT=None,s2i_beta=None,sigma=None) -> Dict[str, Any]:
         assert cfg is None
 
         if inv_cfg is None:

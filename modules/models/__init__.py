@@ -107,7 +107,7 @@ def load_diffusion_model(model: str="runwayml/stable-diffusion-v1-5", device: st
     """Loads a diffusion model from HuggingFace with respective preprocessing and postprocessing function.
 
     Args:
-        model (str, optional): Model name to load. Defaults to "CompVis/stable-diffusion-v1-4".
+        model (str, optional): Model name to load. Defaults to "runwayml/stable-diffusion-v1-5".
         device (str, optional): Device to use. Defaults to "cuda".
         preproc_args (Optional[Dict[str, Any]], optional): Arguments passed to the preprocessing function. Defaults to None.
 

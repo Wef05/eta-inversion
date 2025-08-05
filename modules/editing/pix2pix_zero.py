@@ -12,10 +12,9 @@ from typing import Dict, Iterator, List, Optional, Any, Tuple, Union
 from modules.inversion.diffusion_inversion import DiffusionInversion
 
 from transformers import BlipForConditionalGeneration, BlipProcessor
-from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion_pix2pix_zero import Pix2PixZeroL2Loss
 from diffusers.models.attention import Attention
-from diffusers.models.unet_2d_condition import UNet2DConditionOutput, UNet2DConditionModel
-
+from diffusers.models.unets.unet_2d_condition import UNet2DConditionOutput, UNet2DConditionModel
+from diffusers.pipelines.pix2pix_zero.pix2pix_zero_l2_loss import Pix2PixZeroL2Loss
 
 class Pix2PixZeroAttnProcessor:
     """An attention processor class to store the attention weights.

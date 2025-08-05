@@ -4,7 +4,7 @@ import torch
 from tqdm import tqdm
 from .pnp_utils import register_time, register_attention_control_efficient, register_conv_control_efficient
 
-from diffusers.models.unet_2d_condition import UNet2DConditionOutput
+from diffusers.models.unets.unet_2d_condition import UNet2DConditionOutput
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from typing import List
 

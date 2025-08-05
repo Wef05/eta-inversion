@@ -135,7 +135,7 @@ class TestEdit(unittest.TestCase):
         cls.save_image_path = Path("result/test")
         cls.device = "cuda" 
 
-        cls.model, (cls.preproc, cls.postproc) = load_diffusion_model("CompVis/stable-diffusion-v1-4", cls.device, variant="fp32", preproc_args={"center_crop": True, "return_np": False})
+        cls.model, (cls.preproc, cls.postproc) = load_diffusion_model("runwayml/stable-diffusion-v1-5", cls.device, variant="fp32", preproc_args={"center_crop": True, "return_np": False})
 
     @classmethod
     def edit_helper(cls, edit_config: Dict[str, Any], image: str, source_prompt: str, 

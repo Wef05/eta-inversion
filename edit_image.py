@@ -133,7 +133,7 @@ def main(input: str, model: str, source_prompt: str, target_prompt: str, output:
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter, description="Edits a single image.")
     parser.add_argument("--input", required=True, help="Path to image to invert.")
-    parser.add_argument("--model", default="CompVis/stable-diffusion-v1-4", help="Diffusion Model.")
+    parser.add_argument("--model", default="runwayml/stable-diffusion-v1-5", help="Diffusion Model.")
     parser.add_argument("--source_prompt", required=True, help="Prompt to use for inversion.")
     parser.add_argument("--target_prompt", required=True, help="Prompt to use for inversion.")
     parser.add_argument("--output", help="Path for output image.")

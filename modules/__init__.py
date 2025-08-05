@@ -15,7 +15,7 @@ from .editing.simple_editor import SimpleEditor
 from .editing.ptp_editor import PromptToPromptEditor
 from .editing.masactrl_editor import MasactrlEditor
 from .editing.pnp_editor import PlugAndPlayEditor
-from .editing.pix2pix_zero import Pix2PixZeroEditor
+#from .editing.pix2pix_zero import Pix2PixZeroEditor
 
 from .models import StablePreprocess, StablePostProc, load_diffusion_model
 from modules.editing.editor import Editor
@@ -48,7 +48,7 @@ _editors = {
     "ptp": PromptToPromptEditor,
     "masactrl": MasactrlEditor,
     "pnp": PlugAndPlayEditor,
-    "pix2pix_zero": Pix2PixZeroEditor,
+    #"pix2pix_zero": Pix2PixZeroEditor,
     # "pix2pix_zero_split": Pix2PixZeroEditor,
     "invedit": InversionEditor,
 }
