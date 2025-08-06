@@ -73,8 +73,12 @@ def expand_tensor_with_zeros(t: torch.Tensor) -> torch.Tensor:
         (4, *t.shape[1:]), dtype=t.dtype, device=t.device, requires_grad=t.requires_grad
     )
     # 步骤 2：写入原始帧
+    #控制目标路径
     out[1] = t[0]
     out[3] = t[1]
+    #用目标路径信息同时控制原图路径
+    out[0] = t[0]
+    out[2] = t[1]
     return out
 
 
@@ -440,7 +444,6 @@ class EtaInversion(DiffusionInversion):
             guidance_scale = self.guidance_scale_fwd
             noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
         else:
-            #warning!!!!简单实现，鲁棒性差！！
             if controlnet is not None:
                 controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
                 controlnet_res = expand_controlnet_res_with_zeros(controlnet_res)
