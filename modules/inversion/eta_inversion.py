@@ -339,7 +339,7 @@ class EtaInversion(DiffusionInversion):
         guidance_scale_bwd = guidance_scale_bwd or self.guidance_scale_bwd
 
         # call controller callback (e.g. ptp)
-        latent = self.controller.begin_step(latent=latent, t=t)
+        #latent = self.controller.begin_step(latent=latent, t=t)
         # make a noise prediction using UNet
         ctx= torch.no_grad() if not enable_grad else torch.enable_grad()
         with ctx:
