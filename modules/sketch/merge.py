@@ -61,7 +61,7 @@ class AdaptiveMerge:
 
         pred_dir_uam = (1 - alpha_prod_t_prev)**0.5 * noise_pred_s
         latent_s = alpha_prod_t_prev**0.5 * pred_x0_s + pred_dir_uam
-        return {"prev_sample": torch.stack([latent_t, latent_s], dim=0)}
+        return {"prev_sample": torch.stack([latent_s, latent_t], dim=0)}
 
 '''
         pred_x0[1] = pred_x0[1] - (pred_x0[1] - pred_x0_uam) * recon_mask
