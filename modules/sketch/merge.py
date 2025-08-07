@@ -18,14 +18,14 @@ class AdaptiveMerge:
         assert image.max() <= 1 and image.min() >= 0
 
         # Get the maximum value in each neighborhood
-        image.unsqueeze_(0)
+        #image.unsqueeze_(0)
         dilated_image = nnf.max_pool2d(image, kernel_size, stride, padding)
 
         return dilated_image
 
-    def get_mask(self, pred_x0: torch.Tensor,i,dilate_mask=0,quantile=0.7) -> torch.Tensor:
+    def get_mask(self, pred_xt,pred_xs: torch.Tensor,i,dilate_mask=0,quantile=0.7) -> torch.Tensor:
         quantile_list = np.linspace(0, quantile, 50)
-        x0_delta = (pred_x0[0] - pred_x0[1])
+        x0_delta = (pred_xt - pred_xs)
         threshold = x0_delta.abs().quantile(quantile_list[i])
 
         x0_delta -= x0_delta.clamp(-threshold, threshold)
@@ -53,7 +53,7 @@ class AdaptiveMerge:
         pred_x0_t = (latent_t - beta_prod_t**0.5 * noise_pred_t) / alpha_prod_t**0.5
         pred_x0_s = (latent_s - beta_prod_t**0.5 * noise_pred_s) / alpha_prod_t**0.5
 
-        recon_mask = self.get_mask(pred_x0_t,i)
+        recon_mask = self.get_mask(pred_x0_t,pred_x0_s,i)
 
         true_ratio = recon_mask.sum().item() / recon_mask.numel()
         false_ratio = 1 - true_ratio
