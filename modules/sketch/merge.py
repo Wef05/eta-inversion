@@ -18,6 +18,7 @@ class AdaptiveMerge:
         assert image.max() <= 1 and image.min() >= 0
 
         # Get the maximum value in each neighborhood
+        image.unsqueeze_(0)
         dilated_image = nnf.max_pool2d(image, kernel_size, stride, padding)
 
         return dilated_image
