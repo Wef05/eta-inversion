@@ -37,7 +37,7 @@ class AdaptiveMerge:
         recon_mask =  1 - mask_edit
         return recon_mask
 
-    def __call__(self,noise_pred,t,latent,i,model):
+    def __call__(self,noise_pred,t,latent,source_latent_prev,source_noise,i,model):
         """
         目标 源
         """
@@ -50,16 +50,17 @@ class AdaptiveMerge:
         alpha_prod_t = model.scheduler.alphas_cumprod[t]
         alpha_prod_t_prev = model.scheduler.alphas_cumprod[prev_t] if prev_t > 0 else model.scheduler.final_alpha_cumprod
         beta_prod_t = 1 - alpha_prod_t
+
         pred_x0_t = (latent_t - beta_prod_t**0.5 * noise_pred_t) / alpha_prod_t**0.5
         pred_x0_s = (latent_s - beta_prod_t**0.5 * noise_pred_s) / alpha_prod_t**0.5
-
+        pred_x0_source = (source_latent_prev - beta_prod_t**0.5 * source_noise) / alpha_prod_t**0.5
         recon_mask = self.get_mask(pred_x0_t,pred_x0_s,i)
 
         true_ratio = recon_mask.sum().item() / recon_mask.numel()
         false_ratio = 1 - true_ratio
         print(f"recon_mask中True占比: {true_ratio:.4f}, False占比: {false_ratio:.4f}")
 
-        pred_x0_t = pred_x0_t - (pred_x0_t - pred_x0_s) * recon_mask
+        pred_x0_t = pred_x0_t - (pred_x0_t - pred_x0_source) * recon_mask
 
         pred_dir = (1 - alpha_prod_t_prev)**0.5 * noise_pred_t
         latent_t = alpha_prod_t_prev**0.5 * pred_x0_t + pred_dir
