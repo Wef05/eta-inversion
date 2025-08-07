@@ -290,10 +290,10 @@ class Demo:
 
                         if inverter == "etainv":
                             self.inputs[f"{k}.eta_end"] = gr.Number(
-                                label="Eta t=T", value=0.4, step=0.1,)
+                                label="Eta t=T", value=1, step=0.1,)
                             
                             self.inputs[f"{k}.eta_start"] = gr.Number(
-                                label="Eta t=0", value=0.0, step=0.1,)
+                                label="Eta t=0", value=1, step=0.1,)
                             
                             self.inputs[f"{k}.noise_sample_count"] = gr.Number(
                                 label="Noise sample count", value=10, precision=0)
