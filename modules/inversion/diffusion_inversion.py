@@ -322,7 +322,7 @@ class DiffusionInversion:
         """
         recon_t_end = 0
         recon_t_begin = recon_t
-        if ((t < recon_t_begin) and (t > recon_t_end)):
+        if ((t < recon_t_begin) and (t > recon_t_end)) and latent.shape[0] == 2:
             scheduler_bwd = AdaptiveMerge()
             return scheduler_bwd(noise_pred, t, latent,i,self.model)
         else:
