@@ -359,8 +359,8 @@ class EtaInversion(DiffusionInversion):
                 eta = eta * mix_mask
 
         recon_t_end = 0
-        recon_t_begin = 400
-        if ((t < recon_t_begin) and (t > recon_t_end)) and latent.shape[0] == 2:
+        recon_t_begin = 800
+        if ((t < recon_t_begin) and (t > recon_t_end)):
             scheduler_bwd = AdaptiveMerge()
             new_latent = scheduler_bwd(noise_pred, t, latent,i,self.model)["prev_sample"]
         else:

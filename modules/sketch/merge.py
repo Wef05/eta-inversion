@@ -34,7 +34,7 @@ class AdaptiveMerge:
 
         radius = int(dilate_mask)
         mask_edit = self.dilate(mask_edit.float(), kernel_size=2 * radius + 1, padding=radius)
-        recon_mask = 1 - mask_edit
+        recon_mask =  1 - mask_edit
         return recon_mask
 
     def __call__(self,noise_pred,t,latent,i,model):
@@ -59,7 +59,7 @@ class AdaptiveMerge:
         false_ratio = 1 - true_ratio
         print(f"recon_mask中True占比: {true_ratio:.4f}, False占比: {false_ratio:.4f}")
 
-        #pred_x0_t = pred_x0_t - (pred_x0_t - pred_x0_s) * recon_mask
+        pred_x0_t = pred_x0_t - (pred_x0_t - pred_x0_s) * recon_mask
 
         pred_dir = (1 - alpha_prod_t_prev)**0.5 * noise_pred_t
         latent_t = alpha_prod_t_prev**0.5 * pred_x0_t + pred_dir
