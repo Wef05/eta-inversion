@@ -18,7 +18,6 @@ from itertools import product
 import torchvision
 
 from modules.sketch.AntiGradient import AntiGradientPipeline
-from modules.sketch.merge import AdaptiveMerge
 from modules.sketch.controlnet import ControlNetPaperer
 import os
 import matplotlib.pyplot as plt
@@ -357,7 +356,7 @@ class EtaInversion(DiffusionInversion):
             mix_mask = ( sigma * mask_eta + (1 - sigma ) * mask_sketch)
             if mask_eta is not None:
                 eta = eta * mix_mask
-        new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise).prev_sample
+        new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise,i=i).prev_sample
         new_latent[:1] = source_latent_prev
         # AntiGradient
         if sketch is not None:
@@ -368,9 +367,6 @@ class EtaInversion(DiffusionInversion):
                         new_latent[1:2] = anti_latent[1:2]
 
         new_latent = new_latent.clone()
-        merger = AdaptiveMerge(lamb=0.3, kernel_size=5)
-        if t <= 800 :
-            new_latent[1:2] = merger(new_latent)
         # call controller callback to modify latent (e.g. ptp)
         #new_latent = self.controller.end_step(latent=new_latent, noise_pred=noise_pred, t=t)
 
