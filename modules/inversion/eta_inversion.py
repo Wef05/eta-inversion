@@ -362,7 +362,7 @@ class EtaInversion(DiffusionInversion):
         recon_t_begin = 800
         if ((t < recon_t_begin) and (t > recon_t_end)):
             scheduler_bwd = AdaptiveMerge()
-            new_latent = scheduler_bwd(noise_pred, t, latent,source_latent_prev,inv_result["noise_preds"][-(i+2)],i,self.model)["prev_sample"]
+            new_latent = scheduler_bwd(noise_pred, t, latent,source_latent_prev[0],inv_result["noise_preds"][-(i+2)][0],i,self.model)["prev_sample"]
         else:
             new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise).prev_sample
 
