@@ -9,7 +9,6 @@ from modules.inverse_schedulers import DiffusionInverseScheduler, DDIMInverseSch
 from ..editing.controller import ControllerBase, ControllerEmpty
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import StableDiffusionPipeline
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
-from modules.sketch.merge import AdaptiveMerge
 import hashlib
 def tensor_md5(tensor: torch.Tensor) -> str:
     # 确保 tensor 在 cpu 上并转为 numpy
@@ -309,7 +308,7 @@ class DiffusionInversion:
         """
         return self.scheduler_fwd.step(noise_pred, t, latent, *args, **kwargs)
 
-    def step_backward(self, noise_pred: torch.Tensor, t: torch.Tensor, latent: torch.Tensor,i=None,recon_t=400,*args, **kwargs) -> Any:
+    def step_backward(self, noise_pred: torch.Tensor, t: torch.Tensor, latent: torch.Tensor,*args, **kwargs) -> Any:
         """Perform a backward step using the backward noise scheduler and predictied noise.
 
         Args:
@@ -320,13 +319,7 @@ class DiffusionInversion:
         Returns:
             Any: Scheduler output containing new latent.
         """
-        recon_t_end = 0
-        recon_t_begin = recon_t
-        if ((t < recon_t_begin) and (t > recon_t_end)) and latent.shape[0] == 2:
-            scheduler_bwd = AdaptiveMerge()
-            return scheduler_bwd(noise_pred, t, latent,i,self.model)
-        else:
-            return self.scheduler_bwd.step(noise_pred, t, latent, *args, **kwargs)
+        return self.scheduler_bwd.step(noise_pred, t, latent, *args, **kwargs)
 
     def predict_step_forward(self, latent: torch.Tensor, t: torch.Tensor, context: torch.Tensor, guidance_scale_fwd: Optional[float]=None) -> Tuple[torch.Tensor, torch.Tensor]:
         """Perform one forward diffusion steps. Makes a noise prediction using SD's UNet first and then updates the latent using the noise scheduler.

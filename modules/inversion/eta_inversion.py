@@ -19,6 +19,7 @@ import torchvision
 
 from modules.sketch.AntiGradient import AntiGradientPipeline
 from modules.sketch.controlnet import ControlNetPaperer
+from modules.sketch.merge import AdaptiveMerge
 import os
 import matplotlib.pyplot as plt
 import re
@@ -356,7 +357,15 @@ class EtaInversion(DiffusionInversion):
             mix_mask = ( sigma * mask_eta + (1 - sigma ) * mask_sketch)
             if mask_eta is not None:
                 eta = eta * mix_mask
-        new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise,i=i).prev_sample
+
+        recon_t_end = 0
+        recon_t_begin = 400
+        if ((t < recon_t_begin) and (t > recon_t_end)) and latent.shape[0] == 2:
+            scheduler_bwd = AdaptiveMerge()
+            new_latent = scheduler_bwd(noise_pred, t, latent,i,self.model)["prev_sample"]
+        else:
+            new_latent = self.step_backward(noise_pred, t, latent, eta=EtaTensor(eta), variance_noise=variance_noise).prev_sample
+
         new_latent[:1] = source_latent_prev
         # AntiGradient
         if sketch is not None:

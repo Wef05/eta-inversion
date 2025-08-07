@@ -7,7 +7,7 @@ import torch.nn.functional as nnf
 import numpy as np
 class AdaptiveMerge:
 
-    def __init__(self, lamb: float = 0.2, kernel_size: int = 3):
+    def __init__(self):
         pass
 
     def dilate(self, image, kernel_size, stride=1, padding=0):
@@ -37,7 +37,7 @@ class AdaptiveMerge:
         recon_mask = 1 - mask_edit
         return recon_mask
 
-    def __call__(self,noise_pred,t,latent,i,model) -> torch.Tensor:
+    def __call__(self,noise_pred,t,latent,i,model):
         """
         目标 源
         """
@@ -61,7 +61,7 @@ class AdaptiveMerge:
 
         pred_dir_uam = (1 - alpha_prod_t_prev)**0.5 * noise_pred_s
         latent_s = alpha_prod_t_prev**0.5 * pred_x0_s + pred_dir_uam
-        return torch.stack([latent_t, latent_s], dim=0)
+        return {"prev_sample": torch.stack([latent_t, latent_s], dim=0)}
 
 '''
         pred_x0[1] = pred_x0[1] - (pred_x0[1] - pred_x0_uam) * recon_mask
