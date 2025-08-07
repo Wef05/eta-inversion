@@ -22,7 +22,7 @@ class AdaptiveMerge:
 
         return dilated_image
 
-    def get_mask(self, pred_x0: torch.Tensorm,i,dilate_mask=0,quantile=0.7) -> torch.Tensor:
+    def get_mask(self, pred_x0: torch.Tensor,i,dilate_mask=0,quantile=0.7) -> torch.Tensor:
         quantile_list = np.linspace(0, quantile, 50)
         x0_delta = (pred_x0[0] - pred_x0[1])
         threshold = x0_delta.abs().quantile(quantile_list[i])
