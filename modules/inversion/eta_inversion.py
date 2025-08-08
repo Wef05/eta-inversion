@@ -30,6 +30,7 @@ os.system("rm -rf result/pie_eta_new/*")
 import cv2
 import torch
 
+from modules.utils.ptp import save_mask_gif
 def safe_filename(s: str) -> str:
     """把字符串转成安全文件名：去掉非字母数字下划线字符。"""
     return re.sub(r'[^a-zA-Z0-9_]', '_', s)
@@ -411,6 +412,7 @@ class EtaInversion(DiffusionInversion):
             if enable_grad:
                 self.anti_gradient.clear()
             torch.cuda.empty_cache()  # 可选：清理已释放但仍保留的碎片
+        save_mask_gif(self.model)
         return latent
 
     def compute_optimal_variance_noise(self, latent_prev: torch.Tensor, latent: torch.Tensor, t: int, eta: float, noise_pred: torch.Tensor) -> torch.Tensor:

@@ -14,6 +14,19 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import Stabl
 LOW_RESOURCE = False
 MAX_NUM_WORDS = 77
 
+mask_list = []
+def save_mask_gif(model):
+    frames = []
+    for mask in mask_list:
+        latent = 1 / 0.18215 * mask
+        image = model.vae.decode(latent)['sample']
+        mask_image = image.squeeze(0).cpu().numpy()  # 转为 numpy 数组并去掉 batch 维度
+        mask_image = (mask_image * 255).astype(np.uint8)
+        img = Image.fromarray(mask_image)
+        frames.append(img)
+    # 保存 GIF 动画
+    frames[0].save("attn_mask", save_all=True, append_images=frames[1:], duration=0.2, loop=0)
+    print("GIF saved at attn_mask")
 
 class LocalBlend:
     
@@ -26,6 +39,7 @@ class LocalBlend:
         mask = mask / mask.max(2, keepdims=True)[0].max(3, keepdims=True)[0]
         mask = mask.gt(self.th[1-int(use_pool)])
         mask = mask[:1] + mask
+        mask_list.append(mask)
         return mask
     
     def __call__(self, x_t: torch.Tensor, attention_store: Dict[str, List[    torch.Tensor]]) -> torch.Tensor:
