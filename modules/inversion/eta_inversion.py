@@ -141,7 +141,7 @@ def _create_eta_func_pow(p1, p2, p=1):
 
     return f, f_str
 
-
+from modules.sketch.injector import injector
 class EtaInversion(DiffusionInversion):
     noise_sampler = None
 
@@ -439,9 +439,11 @@ class EtaInversion(DiffusionInversion):
         # latent_input ： latent_s latent_t latent_s latent_t
         latent_input = torch.cat([latent] * 2) if latent.shape[0] != context.shape[0] else latent  # needed by pix2pix
         if is_fwd:
+            injector.reset(t)
             guidance_scale = self.guidance_scale_fwd
             noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
         else:
+            injector.reset(t,False)
             if controlnet is not None and False:
                 controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
                 controlnet_res = expand_controlnet_res(controlnet_res)

@@ -4,6 +4,8 @@ import torch
 from typing import Callable, Dict, List, Union, Any, Optional
 from modules.editing.controller import ControllerBase
 from modules.inversion.diffusion_inversion import DiffusionInversion
+from modules.sketch.injector import injector
+
 
 class Editor:
     """Base class for all editors
@@ -64,6 +66,7 @@ class ControllerBasedEditor(Editor):
         """
         raise NotImplementedError
 
+    from modules.sketch.injector import injector
     def edit(self, image: torch.Tensor, source_prompt: str, target_prompt: str, cfg: Optional[Dict[str, Any]]=None, inv_cfg=None, sketch=None,s2i_endT=None,s2i_beta=None,sigma=None,**kwargs) -> Dict[str, Any]:
         if cfg is None:
             cfg = {**self.dft_cfg}
@@ -90,7 +93,10 @@ class ControllerBasedEditor(Editor):
             inv_res = {"latents": [zT_gt.to(self.inverter.model.device)]}
         else:
             inv_res = self.inverter.invert(image, prompt=source_prompt, context=src_context, inv_cfg=inv_cfg)  # , guidance_scale_fwd=1
-
+        if sketch is not None:
+            print('sketch inversion')
+            injector.isSketch = True
+            self.inverter.invert(sketch, prompt=target_prompt, context=target_context, inv_cfg=inv_cfg)
         # prepare controller
         controller = self.make_controller(image=image, source_prompt=source_prompt, target_prompt=target_prompt, inv_res=inv_res, **cfg, **kwargs)
 
