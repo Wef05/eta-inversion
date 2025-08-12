@@ -50,11 +50,11 @@ def to_4ch(attn_map):
     if attn_map.shape[1] == 1:  # 若通道=1，则复制到4通道
         attn_map = attn_map.repeat(1, 4, 1, 1)  # -> [1,4,H,W]
     return attn_map
-# expand_residuals_with_zeros.py
+
 import torch
 from typing import List, Dict
 
-def expand_tensor_with_zeros(t: torch.Tensor) -> torch.Tensor:
+def expand_tensor(t: torch.Tensor) -> torch.Tensor:
     """
     简短描述：
         将形状 [2, …] 的张量扩展为 [4, …]，并按 [0, t[0], 0, t[1]] 填充。
@@ -80,9 +80,7 @@ def expand_tensor_with_zeros(t: torch.Tensor) -> torch.Tensor:
     out[0] = t[0]
     out[2] = t[1]
     return out
-
-
-def expand_controlnet_res_with_zeros(
+def expand_controlnet_res(
     controlnet_res: Dict[str, object]
 ) -> Dict[str, object]:
     """
@@ -99,9 +97,9 @@ def expand_controlnet_res_with_zeros(
         2. 对 mid residual 执行同样操作。
     """
     controlnet_res["down_block_additional_residuals"] = [
-        expand_tensor_with_zeros(r) for r in controlnet_res["down_block_additional_residuals"]
+        expand_tensor(r) for r in controlnet_res["down_block_additional_residuals"]
     ]
-    controlnet_res["mid_block_additional_residual"] = expand_tensor_with_zeros(
+    controlnet_res["mid_block_additional_residual"] = expand_tensor(
         controlnet_res["mid_block_additional_residual"]
     )
     return controlnet_res
@@ -446,7 +444,7 @@ class EtaInversion(DiffusionInversion):
         else:
             if controlnet is not None:
                 controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
-                controlnet_res = expand_controlnet_res_with_zeros(controlnet_res)
+                controlnet_res = expand_controlnet_res(controlnet_res)
                 noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context,down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
             else:
                 noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
