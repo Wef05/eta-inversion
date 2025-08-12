@@ -2311,6 +2311,7 @@ class AttnUpBlock2D(nn.Module):
         return hidden_states
 
 
+from modules.sketch.injector import injector
 class CrossAttnUpBlock2D(nn.Module):
     def __init__(
         self,
@@ -2455,6 +2456,7 @@ class CrossAttnUpBlock2D(nn.Module):
                 )[0]
             else:
                 hidden_states = resnet(hidden_states, temb)
+                hidden_states = injector.hook_hidden_states(hidden_states)
                 hidden_states = attn(
                     hidden_states,
                     encoder_hidden_states=encoder_hidden_states,

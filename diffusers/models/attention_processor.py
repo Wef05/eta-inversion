@@ -3242,7 +3242,7 @@ class AttnProcessorNPU:
 
         return hidden_states
 
-
+from modules.sketch.injector import injector
 class AttnProcessor2_0:
     r"""
     Processor for implementing scaled dot-product attention (enabled by default if you're using PyTorch 2.0).
@@ -3290,7 +3290,7 @@ class AttnProcessor2_0:
             hidden_states = attn.group_norm(hidden_states.transpose(1, 2)).transpose(1, 2)
 
         query = attn.to_q(hidden_states)
-
+        query = injector.hook_Q(query)
         if encoder_hidden_states is None:
             encoder_hidden_states = hidden_states
         elif attn.norm_cross:
