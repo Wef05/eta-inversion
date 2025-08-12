@@ -359,8 +359,8 @@ class EtaInversion(DiffusionInversion):
         new_latent[:1] = source_latent_prev
         # AntiGradient
         if sketch is not None:
-            sketch = self.encode(sketch.to(self.model.device))
             if enable_grad:
+                sketch = self.encode(sketch.to(self.model.device))#重复encode
                 with ctx:
                         anti_latent = self.anti_gradient.apply_anti_gradient(latent, new_latent,zT,sketch,t,s2i_beta,eta,self.num_inference_steps,mix_mask,t == s2i_endT)
                         new_latent[1:2] = anti_latent[1:2]
