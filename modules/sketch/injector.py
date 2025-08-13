@@ -34,19 +34,19 @@ class Injector:
                                            'b c (h p1) (w p2) -> b c (h w) p1 p2',p1=patch_window, p2=patch_window)
         first_frame_hid = rearrange(hidden_states[batch_size // 2:, : , :, :].clone(),
                                     'b c (h p1) (w p2) -> b c (h w) p1 p2', p1=patch_window, p2=patch_window)
-
+        print("injected_hidden_states.shape:", injected_hidden_states.shape)
+        print("first_frame_hid.shape:", first_frame_hid.shape)
         mean1 = injected_hidden_states.reshape(b, c, -1, patch_window, patch_window).mean(dim=(-2, -1), keepdim=True)
         var1 = injected_hidden_states.reshape(b, c, -1, patch_window, patch_window).std(dim=(-2, -1), keepdim=True)
         mean2 = first_frame_hid.reshape(b, c, -1, patch_window, patch_window).mean(dim=(-2, -1), keepdim=True)
         var2 = first_frame_hid.reshape(b, c,-1, patch_window, patch_window).std(dim=(-2, -1), keepdim=True)
-        print("injected_hidden_states.shape:", injected_hidden_states.shape)
-        print("mean1.shape:", mean1.shape)
-        print("var1.shape:", var1.shape)
-        print("mean2.shape:", mean2.shape)
         injected_hidden_states = (injected_hidden_states - mean1) / (var1 + 1e-6) * var2 + mean2
         injected_hidden_states = rearrange(injected_hidden_states, 'b c (h w) p1 p2 -> b c (h p1) (w p2)',
                                            h=h // patch_window, w=w // patch_window)
-
+        print("mean1.shape:", mean1.shape)
+        print("var1.shape:", var1.shape)
+        print("mean2.shape:", mean2.shape)
+        print("var2.shape:", var2.shape)
         hidden_states[batch_size // 2:, :, :, :] = injected_hidden_states.clone().detach()
         return  hidden_states
 
