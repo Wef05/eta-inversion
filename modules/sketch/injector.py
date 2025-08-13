@@ -14,12 +14,12 @@ class Injector:
         self.hidden_states_count = 0
         self.Q_count = 0
     def recode_hidden_states(self,hidden_states):
-        if self.t == 200 and self.hidden_states_count in [5,7]:
+        if self.t == 200 and self.hidden_states_count in [5,7] and self.forward == True:
             print("Record hidden states at step 200")
             self.hidden_states.append(hidden_states)
 
     def recode_Q(self,Q):
-        if self.t == 200 and self.Q_count in [23, 27]:
+        if self.t == 200 and self.Q_count in [23, 27] and self.forward == True:
             print("Record Q at step 200")
             self.Q.append(Q)
 
@@ -28,8 +28,10 @@ class Injector:
 
     def load_features(self,hidden_states,row_hidden_states):
         b, c, h, w = row_hidden_states.shape
-        batch_size = 2
-        patch_window = 1
+        batch_size = 1
+        patch_window = 4
+        print("row_hidden_states.shape:", row_hidden_states.shape)
+        print("hidden.shape:", hidden_states.shape)
         injected_hidden_states = rearrange(row_hidden_states,
                                            'b c (h p1) (w p2) -> b c (h w) p1 p2',p1=patch_window, p2=patch_window)
         first_frame_hid = rearrange(hidden_states[batch_size // 2:, : , :, :].clone(),
@@ -85,7 +87,7 @@ class Injector:
         self.hidden_states_count += 1
         #print(f"Step {self.t}, Hidden States count: {self.hidden_states_count}")
         self.recode_hidden_states(hidden_states)
-       # hidden_states = self.replace_hidden_states(hidden_states)
+        hidden_states = self.replace_hidden_states(hidden_states)
         return hidden_states
 
     def hook_Q(self,Q):
