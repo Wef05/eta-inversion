@@ -24,15 +24,14 @@ class Injector:
             self.Q.append(Q)
 
     def isReplace(self):
-        return self.t >= 500 and self.t <= 1000 and self.forward == False
+        return self.t >= 700 and self.t <= 1000 and self.forward == False
 
     def load_features(self,hidden_states,row_hidden_states):
         b, c, h, w = row_hidden_states.shape
-        batch_size = 1
         patch_window = 4
         injected_hidden_states = rearrange(row_hidden_states,
                                            'b c (h p1) (w p2) -> b c (h w) p1 p2',p1=patch_window, p2=patch_window)
-        first_frame_hid = rearrange(hidden_states[batch_size // 2:, : , :, :].clone(),
+        first_frame_hid = rearrange(hidden_states.clone(),
                                     'b c (h p1) (w p2) -> b c (h w) p1 p2', p1=patch_window, p2=patch_window)
         mean1 = injected_hidden_states.reshape(b, c, -1, patch_window, patch_window).mean(dim=(-2, -1), keepdim=True)
         var1 = injected_hidden_states.reshape(b, c, -1, patch_window, patch_window).std(dim=(-2, -1), keepdim=True)
@@ -41,7 +40,7 @@ class Injector:
         injected_hidden_states = (injected_hidden_states - mean1) / (var1 + 1e-6) * var2 + mean2
         injected_hidden_states = rearrange(injected_hidden_states, 'b c (h w) p1 p2 -> b c (h p1) (w p2)',
                                            h=h // patch_window, w=w // patch_window)
-        hidden_states[batch_size // 2:, :, :, :] = injected_hidden_states.clone().detach()
+        hidden_states = injected_hidden_states.clone().detach()
         return  hidden_states
 
     def replace_hidden_states(self,hidden_states):
@@ -53,21 +52,19 @@ class Injector:
             else :
                 return hidden_states
             new_hidden_states = self.load_features(hidden_states[[1,3]],row_hidden_states)
-            hidden_states[1:2] = new_hidden_states[0:1]
+            #hidden_states[1:2] = new_hidden_states[0:1]
             hidden_states[3:4] = new_hidden_states[1:2]
         return hidden_states
 
     def replace_Q(self,Q):
         if self.isReplace():
             if self.Q_count == 23:
-                print(f"Q{Q.shape},Q.shape: {self.Q[0].shape}")
                 row_Q = self.Q[0]
             elif self.Q_count == 27:
-                print(f"Q{Q.shape},Q.shape: {self.Q[1].shape}")
                 row_Q = self.Q[1]
             else :
                 return Q
-            Q[1:2] = row_Q[0:1]
+            #Q[1:2] = row_Q[0:1]
             Q[3:4] = row_Q[1:2]
         return Q
 

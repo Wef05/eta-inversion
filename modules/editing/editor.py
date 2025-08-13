@@ -94,7 +94,6 @@ class ControllerBasedEditor(Editor):
         else:
             inv_res = self.inverter.invert(image, prompt=source_prompt, context=src_context, inv_cfg=inv_cfg)  # , guidance_scale_fwd=1
         if sketch is not None:
-            print('sketch inversion')
             injector.isSketch = True
             self.inverter.invert(sketch, prompt=target_prompt, context=target_context, inv_cfg=inv_cfg)
         # prepare controller
