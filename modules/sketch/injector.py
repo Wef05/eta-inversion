@@ -24,7 +24,7 @@ class Injector:
             self.Q.append(Q)
 
     def isReplace(self):
-        return self.t >= 840 and self.t <= 1000 and self.forward == False
+        return self.t >= 800 and self.t <= 1000 and self.forward == False
 
     def load_features(self,hidden_states,row_hidden_states):
         b, c, h, w = row_hidden_states.shape

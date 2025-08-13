@@ -40,7 +40,7 @@ from .upsampling import (  # noqa
     upsample_2d,
 )
 
-
+from modules.sketch.injector import injector
 class ResnetBlockCondNorm2D(nn.Module):
     r"""
     A Resnet block that use normalization layer that incorporate conditioning information.
@@ -364,6 +364,8 @@ class ResnetBlock2D(nn.Module):
 
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.conv2(hidden_states)
+
+        hidden_states = injector.hook_hidden_states(hidden_states)
 
         if self.conv_shortcut is not None:
             input_tensor = self.conv_shortcut(input_tensor.contiguous())
