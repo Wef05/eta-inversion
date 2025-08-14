@@ -52,7 +52,6 @@ class Injector:
             else :
                 return hidden_states
             new_hidden_states = self.load_features(hidden_states[[1,3]],row_hidden_states)
-            #hidden_states[1:2] = new_hidden_states[0:1]
             hidden_states[3:4] = new_hidden_states[1:2]
         return hidden_states
 
@@ -64,7 +63,6 @@ class Injector:
                 row_Q = self.Q[1]
             else :
                 return Q
-            #Q[1:2] = row_Q[0:1]
             Q[3:4] = row_Q[1:2]
         return Q
 

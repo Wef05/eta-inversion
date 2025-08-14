@@ -190,9 +190,9 @@ class EditorManager:
         sketch = None
         if sketch_image is not None:
             hed = HEDdetector.from_pretrained('lllyasviel/Annotators')
-            sketch_image = hed(sketch_image, scribble=True)
-            sketch_image.save("sketch_output.png")
-            sketch_image = np.array(sketch_image)
+            # sketch_image = hed(sketch_image, scribble=True)
+            # sketch_image.save("sketch_output.png")
+            # sketch_image = np.array(sketch_image)
             '''
             # 反转sketch黑白
             sketch_image = 255 - sketch_image

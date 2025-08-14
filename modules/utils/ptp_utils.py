@@ -197,7 +197,6 @@ def text2image_ldm_stable(
   
     return image, latent
 
-from modules.sketch.injector import injector
 def register_attention_control(model: StableDiffusionPipeline, controller: Optional[AttentionReweight], source_latents: None=None) -> None:
     # source_latents from 0 to T
 
@@ -224,7 +223,6 @@ def register_attention_control(model: StableDiffusionPipeline, controller: Optio
             batch_size, sequence_length, dim = x.shape
             h = self.heads
             q = self.to_q(x)
-            q = injector.hook_Q(q)
             is_cross = context is not None
             context = context if is_cross else x
             k = self.to_k(context)
