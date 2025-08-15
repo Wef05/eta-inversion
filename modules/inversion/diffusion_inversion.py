@@ -58,7 +58,7 @@ class DiffusionInversion:
 
         # create scheduler for model, backward process and forward process
         model.scheduler, self.scheduler_bwd, self.scheduler_fwd = self.create_schedulers(model, scheduler, self.num_inference_steps)
-        self.scheduler_fwd = self.create_schedulers(model, scheduler, self.num_inference_steps_fwd)[2]
+        self.scheduler_fwd_sketch = self.create_schedulers(model, scheduler, self.num_inference_steps_fwd)[2]
 
         # mapping of timesteps to step index
         self.bwd_t_to_i = {t.item(): i for i, t in enumerate(self.scheduler_bwd.timesteps)}
@@ -313,6 +313,8 @@ class DiffusionInversion:
         Returns:
             Any: Scheduler output containing new latent.
         """
+        if injector.isSketch :
+            return self.scheduler_fwd_sketch.step(noise_pred, t, latent, *args, **kwargs)
         return self.scheduler_fwd.step(noise_pred, t, latent, *args, **kwargs)
 
     def step_backward(self, noise_pred: torch.Tensor, t: torch.Tensor, latent: torch.Tensor, *args, **kwargs) -> Any:
@@ -393,6 +395,8 @@ class DiffusionInversion:
         Returns:
             torch.Tensor: Forward timesteps
         """
+        if injector.isSketch:
+            return self.scheduler_fwd_sketch.timesteps
         return self.scheduler_fwd.timesteps
 
     def get_timesteps_backward(self) -> torch.Tensor:

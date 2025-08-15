@@ -2,6 +2,8 @@ from einops import rearrange
 recode_time = 201
 target_Q_location = [15,17,21,23]
 target_hs_location = [14,15,17,18]
+end_time = 300
+start_time = 1000
 class Injector:
     def __init__(self):
         self.hidden_states_count = 0
@@ -18,16 +20,16 @@ class Injector:
         self.Q_count = 0
     def recode_hidden_states(self,hidden_states):
         if self.t == recode_time and self.hidden_states_count in target_hs_location and self.forward == True:
-            print("Record hidden states at step 200")
+            print("Record hidden states at step 201")
             self.hidden_states.append(hidden_states)
 
     def recode_Q(self,Q):
-        if self.t == recode_time and self.Q_count in [23, 27] and self.forward == True:
-            print("Record Q at step 200")
+        if self.t == recode_time and self.Q_count in target_Q_location and self.forward == True:
+            print("Record Q at step 201")
             self.Q.append(Q)
 
     def isReplace(self):
-        return self.t >=300  and self.t <= 1000 and self.forward == False
+        return self.t >=end_time  and self.t <= start_time and self.forward == False
 
     def load_features(self,hidden_states,row_hidden_states):
         b, c, h, w = row_hidden_states.shape
@@ -53,6 +55,7 @@ class Injector:
             else :
                 return hidden_states
             new_hidden_states = self.load_features(hidden_states[[1,3]],row_hidden_states)
+            hidden_states[1:2] = new_hidden_states[0:1]
             hidden_states[3:4] = new_hidden_states[1:2]
         return hidden_states
 
@@ -62,6 +65,7 @@ class Injector:
                 row_Q = self.Q[target_Q_location.index(self.Q_count)]
             else :
                 return Q
+            Q[1:2] = row_Q[0:1]
             Q[3:4] = row_Q[1:2]
         return Q
 
