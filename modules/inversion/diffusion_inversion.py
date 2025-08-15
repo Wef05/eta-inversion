@@ -11,6 +11,10 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import Stabl
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 import hashlib
+
+from ..sketch.injector import injector
+
+
 def tensor_md5(tensor: torch.Tensor) -> str:
     # 确保 tensor 在 cpu 上并转为 numpy
     arr = tensor.detach().cpu().numpy()
@@ -41,6 +45,7 @@ class DiffusionInversion:
 
         # initialize with default parameters of ddim inversion if unset
         scheduler = scheduler or "ddim"
+        self.num_inference_steps_fwd = 1000
         self.num_inference_steps = num_inference_steps or 50
         self.guidance_scale_bwd = guidance_scale_bwd if guidance_scale_bwd is not None else 7.5
         self.guidance_scale_fwd = guidance_scale_fwd if guidance_scale_fwd is not None else 1
@@ -53,6 +58,7 @@ class DiffusionInversion:
 
         # create scheduler for model, backward process and forward process
         model.scheduler, self.scheduler_bwd, self.scheduler_fwd = self.create_schedulers(model, scheduler, self.num_inference_steps)
+        self.scheduler_fwd = self.create_schedulers(model, scheduler, self.num_inference_steps_fwd)[2]
 
         # mapping of timesteps to step index
         self.bwd_t_to_i = {t.item(): i for i, t in enumerate(self.scheduler_bwd.timesteps)}
@@ -419,16 +425,17 @@ class DiffusionInversion:
         # dont compute gradient
         if isinstance(latent, torch.Tensor):
             latent = latent.clone().detach()
-
         for i, t in enumerate(self.pbar(self.get_timesteps_forward(), desc="forward")):
             # iterate over all timesteps and gradually invert latent
+            if injector.break_invert(t) :
+                print(f"break invert at step {i} with t={t.item()}")
+                break
             latent, noise_pred = self.predict_step_forward(latent, t, context, guidance_scale_fwd)
 
             noise_preds.append(noise_pred)
             latents.append(latent)
 
         return {"latents": latents, "noise_preds": noise_preds, "zT_inv": latents[-1]}
-
     def diffusion_backward(self, latent: torch.Tensor, context: torch.Tensor, inv_result: Dict[str, Any],sketch=None) -> torch.Tensor:
         """Run backward (denoise) diffusion process to get latent z0 from inverse latent zT
 

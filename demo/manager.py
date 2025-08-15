@@ -195,7 +195,6 @@ class EditorManager:
             # sketch_image = np.array(sketch_image)
             '''
             # 反转sketch黑白
-            sketch_image = 255 - sketch_image
             low_threshold = 100
             high_threshold = 200
             sketch_image = cv2.Canny(sketch_image, low_threshold, high_threshold)
@@ -204,8 +203,9 @@ class EditorManager:
             canny_image = Image.fromarray(sketch_image)
             canny_image.save("canny_output.png")
             '''
+            #sketch_image = 255 - sketch_image
             sketch = self.preproc(sketch_image)
-            sketch = (sketch + 1) / 2.0
+            #sketch = (sketch + 1) / 2.0
         edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch,s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
 
         img_edit = self.postproc(edit_res["image"])

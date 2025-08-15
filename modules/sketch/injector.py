@@ -1,4 +1,5 @@
 from einops import rearrange
+recode_time = 201
 class Injector:
     def __init__(self):
         self.hidden_states_count = 0
@@ -14,17 +15,17 @@ class Injector:
         self.hidden_states_count = 0
         self.Q_count = 0
     def recode_hidden_states(self,hidden_states):
-        if self.t == 200 and self.hidden_states_count in [5,7] and self.forward == True:
+        if self.t == recode_time and self.hidden_states_count in [5,7] and self.forward == True:
             print("Record hidden states at step 200")
             self.hidden_states.append(hidden_states)
 
     def recode_Q(self,Q):
-        if self.t == 200 and self.Q_count in [23, 27] and self.forward == True:
+        if self.t == recode_time and self.Q_count in [23, 27] and self.forward == True:
             print("Record Q at step 200")
             self.Q.append(Q)
 
     def isReplace(self):
-        return self.t >= 700 and self.t <= 1000 and self.forward == False
+        return self.t >=300  and self.t <= 1000 and self.forward == False
 
     def load_features(self,hidden_states,row_hidden_states):
         b, c, h, w = row_hidden_states.shape
@@ -46,8 +47,10 @@ class Injector:
     def replace_hidden_states(self,hidden_states):
         if self.isReplace():
             if self.hidden_states_count == 5:
+                print("Replace hidden states")
                 row_hidden_states = self.hidden_states[0]
             elif self.hidden_states_count == 7:
+                print("Replace hidden states")
                 row_hidden_states = self.hidden_states[1]
             else :
                 return hidden_states
@@ -58,8 +61,10 @@ class Injector:
     def replace_Q(self,Q):
         if self.isReplace():
             if self.Q_count == 23:
+                print("Replace Q")
                 row_Q = self.Q[0]
             elif self.Q_count == 27:
+                print("Replace Q")
                 row_Q = self.Q[1]
             else :
                 return Q
@@ -83,5 +88,11 @@ class Injector:
         self.recode_Q(Q)
         Q = self.replace_Q(Q)
         return Q
+
+    def break_invert(self,t):
+        if t > recode_time and self.isSketch == True :
+            return True
+        return False
+
 
 injector = Injector()
