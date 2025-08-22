@@ -14,18 +14,30 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import Stabl
 LOW_RESOURCE = False
 MAX_NUM_WORDS = 77
 
+mask_list = []
+def save_mask_gif(model):
+    frames = []
+    for mask in mask_list:
+        mask_image = mask.squeeze(0).squeeze(0).cpu().numpy()  # 转为 numpy 数组并去掉 batch 维度
+        mask_image = (mask_image * 255).astype(np.uint8)
+        img = Image.fromarray(mask_image)
+        frames.append(img)
+    # 保存 GIF 动画
+    frames[0].save("attn_mask.gif", save_all=True, append_images=frames[1:], duration=0.2, loop=0)
+    print("GIF saved at attn_mask")
 
 class LocalBlend:
     
     def get_mask(self, x_t: torch.Tensor, maps: torch.Tensor, alpha: torch.Tensor, use_pool: bool) -> torch.Tensor:
         k = 1
-        maps = (maps * alpha).sum(-1).mean(1)
+        maps = (maps * alpha).sum(-1).mean(1) # maps[2 1 16 16]
         if use_pool:
             maps = nnf.max_pool2d(maps, (k * 2 + 1, k * 2 +1), (1, 1), padding=(k, k))
-        mask = nnf.interpolate(maps, size=(x_t.shape[2:]))
+        mask = nnf.interpolate(maps, size=(x_t.shape[2:])) # mask[2 1 64 64]
         mask = mask / mask.max(2, keepdims=True)[0].max(3, keepdims=True)[0]
         mask = mask.gt(self.th[1-int(use_pool)])
         mask = mask[:1] + mask
+        mask_list.append(mask[1:2])
         return mask
     
     def __call__(self, x_t: torch.Tensor, attention_store: Dict[str, List[    torch.Tensor]]) -> torch.Tensor:
@@ -34,10 +46,10 @@ class LocalBlend:
         self.counter += 1
         if self.counter > self.start_blend:
            
-            maps = attention_store["down_cross"][2:4] + attention_store["up_cross"][:3]
-            maps = [item.reshape(self.alpha_layers.shape[0], -1, 1, 16, 16, MAX_NUM_WORDS) for item in maps]
-            maps = torch.cat(maps, dim=1)
-            mask = self.get_mask(x_t, maps, self.alpha_layers, True)
+            maps = attention_store["down_cross"][2:4] + attention_store["up_cross"][:3] #list.len=5 [16 256 77]
+            maps = [item.reshape(self.alpha_layers.shape[0], -1, 1, 16, 16, MAX_NUM_WORDS) for item in maps] #map[2 8 1 16 16 77]
+            maps = torch.cat(maps, dim=1) # maps[2 40 1 16 16 77]
+            mask = self.get_mask(x_t, maps, self.alpha_layers, True)#[2 1 64 64]
             if self.substruct_layers is not None:
                 maps_sub = ~self.get_mask(maps, self.substruct_layers, False)
                 mask = mask * maps_sub
@@ -206,17 +218,17 @@ class AttentionControlEdit(AttentionStore, abc.ABC):
     
     def forward(self, attn: torch.Tensor, is_cross: bool, place_in_unet: str) -> torch.Tensor:
         super(AttentionControlEdit, self).forward(attn, is_cross, place_in_unet)
-        if is_cross or (self.num_self_replace[0] <= self.cur_step  < self.num_self_replace[1]):
-            h = attn.shape[0] // (self.batch_size)
-            attn = attn.reshape(self.batch_size, h, *attn.shape[1:])
-            attn_base, attn_repalce = attn[0], attn[1:]
-            if is_cross:
-                alpha_words = self.cross_replace_alpha[self.cur_step]
-                attn_repalce_new = self.replace_cross_attention(attn_base, attn_repalce) * alpha_words + (1 - alpha_words) * attn_repalce
-                attn[1:] = attn_repalce_new
-            elif self.num_self_replace[1] >= 0.0 :
-                attn[1:] = self.replace_self_attention(attn_base, attn_repalce, place_in_unet)
-            attn = attn.reshape(self.batch_size * h, *attn.shape[2:])
+        # if is_cross or (self.num_self_replace[0] <= self.cur_step  < self.num_self_replace[1]):
+        #     h = attn.shape[0] // (self.batch_size)
+        #     attn = attn.reshape(self.batch_size, h, *attn.shape[1:])
+        #     attn_base, attn_repalce = attn[0], attn[1:]
+        #     if is_cross:
+        #         alpha_words = self.cross_replace_alpha[self.cur_step]
+        #         attn_repalce_new = self.replace_cross_attention(attn_base, attn_repalce) * alpha_words + (1 - alpha_words) * attn_repalce
+        #         attn[1:] = attn_repalce_new
+        #     elif self.num_self_replace[1] >= 0.0 :
+        #         attn[1:] = self.replace_self_attention(attn_base, attn_repalce, place_in_unet)
+        #     attn = attn.reshape(self.batch_size * h, *attn.shape[2:])
         return attn
     
     def __init__(self, model: StableDiffusionPipeline, prompts: List[str], num_steps: int,
