@@ -530,6 +530,8 @@ class DiffusionInversion:
             latent = self.cat_latent([latent] * num_prompts)
 
         # denoise
+        #随机噪声
+        latent = torch.randn_like(latent)
         z0 = self.diffusion_backward(latent, context, inv_result,sketch=sketch,s2i_endT=s2i_endT,s2i_beta=s2i_beta,sigma=sigma)
 
         if z0 is None:
