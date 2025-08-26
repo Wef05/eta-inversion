@@ -5,6 +5,7 @@ from diffusers.pipelines.controlnet.multicontrolnet import MultiControlNetModel
 from diffusers.utils.torch_utils import is_compiled_module
 from diffusers.image_processor import PipelineImageInput
 import torch
+from modules.sketch.injector import injector
 class ControlNetPaperer(DiffusionPipeline):
     def __init__(
             self,
@@ -41,6 +42,7 @@ class ControlNetPaperer(DiffusionPipeline):
             t,
             i
     ):
+        injector.reset(t, forward=False, mode="controlnet")
         controlnet = self.controlnet._orig_mod if is_compiled_module(self.controlnet) else self.controlnet
         if self.do_classifier_free_guidance and not self.guess_mode:
             image = torch.cat([self.image] * 2)
