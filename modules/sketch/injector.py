@@ -107,8 +107,10 @@ class Injector:
             return hidden_states
         self.hidden_states_count += 1
         self.recode_hidden_states(hidden_states)
-        hidden_states = self.replace_hidden_states(hidden_states)
-        self._save_pca(hidden_states, "hidden", self.hidden_states_count)
+        #hidden_states = self.replace_hidden_states(hidden_states)
+        if self.forward is False and self.t == 1000:
+            self._save_pca(hidden_states, "hidden", self.hidden_states_count)
+
         return hidden_states
 
     def hook_Q(self, Q):
@@ -116,19 +118,22 @@ class Injector:
             return Q
         self.Q_count += 1
         self.recode_Q(Q)
-        Q = self.replace_Q(Q)
-        self._save_pca(Q, "q", self.Q_count)
+        #Q = self.replace_Q(Q)
+        if self.forward is False and self.t == 1000:
+            self._save_pca(Q, "q", self.Q_count)
         return Q
 
     def hook_attention_map(self, attn_map):
         if not self.isSketch:
             return attn_map
         self.attn_count += 1
-        self._save_pca(attn_map, "attn", self.attn_count)
+        if self.forward is False and self.t == 1000:
+            self._save_pca(attn_map, "attn", self.attn_count)
         return attn_map
 
     def break_invert(self, t):
-        if t > recode_time and self.isSketch is True:
+        if self.isSketch is True:
+        #if t > recode_time and self.isSketch is True:
             return True
         return False
 

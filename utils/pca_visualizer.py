@@ -54,16 +54,16 @@ class PCAVisualizer:
         return self.fit(data).transform(data)
 
     def visualize(
-        self,
-        data: Union[np.ndarray, list],
-        labels: Optional[Union[np.ndarray, list]] = None,
-        save_path: Optional[Union[str, Path]] = None,
+            self,
+            data: Union[np.ndarray, list],
+            labels: Optional[Union[np.ndarray, list]] = None,
+            save_path: Optional[Union[str, Path]] = None,
     ) -> np.ndarray:
-        """Fit PCA on data and create a scatter plot.
+        """Fit PCA on data and create a heatmap instead of scatter plot.
 
         Args:
             data (Union[np.ndarray, list]): Input data of shape (N, D).
-            labels (Optional[Union[np.ndarray, list]], optional): Labels for coloring points. Defaults to None.
+            labels (Optional[Union[np.ndarray, list]], optional): Ignored in heatmap mode.
             save_path (Optional[Union[str, Path]], optional): If provided, save the plot to this path instead of showing it.
 
         Returns:
@@ -72,33 +72,30 @@ class PCAVisualizer:
         proj = self.fit_transform(data)
 
         if self.n_components == 3:
-            from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection="3d")
-            if labels is None:
-                ax.scatter(proj[:, 0], proj[:, 1], proj[:, 2])
-            else:
-                sc = ax.scatter(proj[:, 0], proj[:, 1], proj[:, 2], c=labels, cmap="viridis")
-                fig.colorbar(sc)
-            ax.set_xlabel("PC1")
-            ax.set_ylabel("PC2")
-            ax.set_zlabel("PC3")
-        else:
+            # 三维情况下，先只画前两维的热力图
+            x, y = proj[:, 0], proj[:, 1]
             plt.figure()
-            if labels is None:
-                plt.scatter(proj[:, 0], proj[:, 1])
-            else:
-                sc = plt.scatter(proj[:, 0], proj[:, 1], c=labels, cmap="viridis")
-                plt.colorbar(sc)
+            plt.hexbin(x, y, gridsize=50, cmap="viridis")  # 或者用 plt.hist2d
+            plt.colorbar(label="Density")
             plt.xlabel("PC1")
             plt.ylabel("PC2")
+            plt.title("PCA Heatmap (from first 2 components)")
+        else:
+            # 二维情况直接画热力图
+            x, y = proj[:, 0], proj[:, 1]
+            plt.figure()
+            plt.hexbin(x, y, gridsize=50, cmap="viridis")
+            plt.colorbar(label="Density")
+            plt.xlabel("PC1")
+            plt.ylabel("PC2")
+            plt.title("PCA Heatmap")
 
-        plt.title("PCA Visualization")
         if save_path is not None:
             Path(save_path).parent.mkdir(parents=True, exist_ok=True)
             plt.savefig(save_path)
             plt.close()
         else:
             plt.show()
+
         return proj
+
