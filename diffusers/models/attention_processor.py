@@ -3312,11 +3312,13 @@ class AttnProcessor2_0:
         if attn.norm_k is not None:
             key = attn.norm_k(key)
 
-        # the output of sdp = (batch, num_heads, seq_len, head_dim)
-        # TODO: add support for attn.scale when we move to Torch 2.1
-        hidden_states = F.scaled_dot_product_attention(
-            query, key, value, attn_mask=attention_mask, dropout_p=0.0, is_causal=False
-        )
+        scale = 1.0 / math.sqrt(head_dim)
+        attn_scores = torch.matmul(query, key.transpose(-2, -1)) * scale
+        if attention_mask is not None:
+            attn_scores = attn_scores + attention_mask
+        attn_probs = attn_scores.softmax(dim=-1)
+        attn_probs = injector.hook_attention_map(attn_probs)
+        hidden_states = torch.matmul(attn_probs, value)
 
         hidden_states = hidden_states.transpose(1, 2).reshape(batch_size, -1, attn.heads * head_dim)
         hidden_states = hidden_states.to(query.dtype)

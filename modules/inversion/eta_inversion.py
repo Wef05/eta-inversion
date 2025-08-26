@@ -444,10 +444,18 @@ class EtaInversion(DiffusionInversion):
             noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
         else:
             injector.reset(t,False)
-            if controlnet is not None and False:
+            if controlnet is not None:
                 controlnet_res = controlnet.controlnet_inference(latent[1], latent_input[[1,3]], t.to(self.model.device), i)
                 controlnet_res = expand_controlnet_res(controlnet_res)
-                noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context,down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],**kwargs)["sample"].chunk(2)
+                injector.reset(t, False, mode="sample")
+                noise_pred_uncond, noise_prediction_text = self.unet(
+                    latent_input,
+                    t,
+                    encoder_hidden_states=context,
+                    down_block_additional_residuals=controlnet_res["down_block_additional_residuals"],
+                    mid_block_additional_residual=controlnet_res["mid_block_additional_residual"],
+                    **kwargs,
+                )["sample"].chunk(2)
             else:
                 noise_pred_uncond, noise_prediction_text = self.unet(latent_input, t, encoder_hidden_states=context, **kwargs)["sample"].chunk(2)
         if isinstance(guidance_scale, (tuple, list, dict, np.ndarray)):
