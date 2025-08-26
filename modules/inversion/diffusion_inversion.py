@@ -531,7 +531,7 @@ class DiffusionInversion:
 
         latent = inv_result["latents"][-1]
         #随机噪声
-        latent = torch.randn_like(latent)
+        #latent = torch.randn_like(latent)
         # create context from prompt(s) if not provided
         context = context if context is not None else self.create_context(prompt)
 

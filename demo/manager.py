@@ -190,9 +190,9 @@ class EditorManager:
         sketch = None
         if sketch_image is not None:
             hed = HEDdetector.from_pretrained('lllyasviel/Annotators')
-            # sketch_image = hed(sketch_image, scribble=True)
-            # sketch_image.save("sketch_output.png")
-            # sketch_image = np.array(sketch_image)
+            sketch_image = hed(sketch_image, scribble=True)
+            sketch_image.save("sketch_output.png")
+            sketch_image = np.array(sketch_image)
             '''
             # 反转sketch黑白
             low_threshold = 100
@@ -203,9 +203,9 @@ class EditorManager:
             canny_image = Image.fromarray(sketch_image)
             canny_image.save("canny_output.png")
             '''
-            #sketch_image = 255 - sketch_image
+            sketch_image = 255 - sketch_image
             sketch = self.preproc(sketch_image)
-            #sketch = (sketch + 1) / 2.0
+            sketch = (sketch + 1) / 2.0
         edit_res = self.editor.edit(image, source_prompt, target_prompt, inv_cfg=inv_cfg, sketch=sketch,s2i_endT=s2i_endT, s2i_beta=s2i_beta,sigma=sigma)
 
         img_edit = self.postproc(edit_res["image"])
